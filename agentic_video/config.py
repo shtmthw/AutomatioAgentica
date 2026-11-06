@@ -60,3 +60,15 @@ BURN_SUBTITLES = True    # burn the English subtitles into the main MP4 (an .srt
 FINAL_NAME = "agentic_ai_intro_hi_1080p"
 AUDIO_LANG, SUB_LANG = "hin", "eng"   # metadata: Hindi narration, English subtitles
 SUB_FONT = "Inter"                   # subtitle font (English)
+
+# ---- English dub (tools/dub_en.py) ------------------------------------------
+# The same video and subtitles, narrated in English: Andrew speaks the English
+# subtitles at the subtitle times. Free (edge-tts), no ElevenLabs credits.
+EN_VOICE = "en-US-AndrewMultilingualNeural"   # Microsoft "Andrew" (warm, calm male)
+EN_VOICE_RATE = -5         # base pace in % (edge-tts rate): calm, teaching pace
+EN_MAX_RATE = 40           # a sentence is sped up (up to this) only if it would outrun its subtitle
+EN_MIN_RATE = -15          # a sentence split over 2+ subtitles may be slowed (down to this) so it
+EN_MAX_LATE = 0.3          # ... and start up to this late (s), to avoid long pauses between its parts
+EN_VOICE_PITCH = "+0Hz"
+EN_VOICE_DIR = ASSETS / "voice_en"
+EN_FINAL_NAME = "agentic_ai_intro_en_1080p"

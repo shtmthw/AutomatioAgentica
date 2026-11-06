@@ -106,13 +106,16 @@ def _sentence_spans(spoken: str, sentences: list[str], words: list):
     return spans
 
 
-def line_cues(start: float, entry: dict) -> list[tuple[float, float, str]]:
+def line_cues(start: float, entry: dict, grouped: bool = False):
     """Absolute (start, end, text) cues for one narration line.
 
     The subtitle (entry["text"], English) is paired sentence-by-sentence with the
     spoken narration (entry["tts"], Hindi): subtitle sentence i is shown while
     spoken sentence i is heard. Long sentences are split at commas, with the
-    sentence's time shared in proportion to length."""
+    sentence's time shared in proportion to length.
+
+    grouped=True also returns [(english_sentence, [cue indices]), ...] so callers
+    (the English dub) know which cues make up each sentence."""
     shown, spoken, words = entry["text"], entry["tts"], entry["words"]
     whole = (words[0][0], words[-1][0] + words[-1][1])
     es = _sentences(shown, ".?!।")
@@ -120,18 +123,20 @@ def line_cues(start: float, entry: dict) -> list[tuple[float, float, str]]:
     spans = _sentence_spans(spoken, hs, words) if len(es) == len(hs) else None
     if not spans or any(sp is None for sp in spans):
         es, spans = [shown], [whole]
-    cues = []
+    cues, groups = [], []
     for (t0, t1), sent in zip(spans, es):
         chunks = _split(sent)
         total = sum(len(c) for c in chunks)
         t = t0
+        groups.append((sent, list(range(len(cues), len(cues) + len(chunks)))))
         for c in chunks:
             d = (t1 - t0) * len(c) / total
             cues.append([start + t, start + t + d, c])
             t += d
     for k in range(len(cues) - 1):          # contiguous within the line
         cues[k][1] = max(cues[k][1], cues[k + 1][0] - 0.05)
-    return [tuple(c) for c in cues]
+    cues = [tuple(c) for c in cues]
+    return (cues, groups) if grouped else cues
 
 
 def finalize(cues: list[tuple[float, float, str]], lead=0.08, tail=0.35, min_gap=0.04):

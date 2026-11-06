@@ -212,3 +212,27 @@ website + app mockups building themselves, tracked "AGENTIC AI / THE BEGINNING" 
 
 Reuse the same running example (the divide-by-zero crash) in the intro and the
 bug-fix chapter. It gives the lesson a satisfying arc.
+
+---
+
+## 11. English dub (same video, English voice)
+
+`python -m tools.dub_en` makes `output/agentic_ai_intro_en_1080p.mp4`: the finished
+video with **Microsoft Andrew** (`en-US-AndrewMultilingualNeural`, edge-tts, free)
+speaking the English subtitles. Nothing is re-rendered: the video stream (with the
+burned-in subtitles) is stream-copied from the Hindi MP4, so the picture is bit-identical.
+
+- Subtitle cues are rebuilt from the same timeline and must equal the `.srt` byte for byte.
+- One edge-tts clip per **English sentence** (natural intonation), cut in word gaps
+  between its cues. Rules: a cue's words start after the cue appears and are over before
+  the next cue appears. Too long: re-speak faster (+5 % steps). English is ~30 % shorter
+  than the Hindi, so a sentence split over two cues has to wait at the cut. Waiting
+  1–2 s mid-phrase sounded broken. Fixed by: base pace −5 %; such sentences may be spoken
+  up to −15 % and start ≤0.3 s late; the remaining wait goes to a comma. Spoken-only
+  commas live in `EN_PRONUNCIATION` (e.g. "The difference is, whether …").
+- edge-tts word times run ~45 ms ahead of the decoded MP3 (measured): compensated (`LAT`).
+- Cuts snap to the quietest 5 ms near the word gap, with 6 ms fades.
+- Verify: video MD5 equal to the Hindi MP4; `ebur128` ≈ −16 LUFS; voice energy only while a
+  subtitle is on screen; Whisper (`small.en`, word timestamps) matched 98.5 % of subtitle
+  words in order (the rest were ASR spellings like "80" or "file system"). Whisper puts
+  sentence-initial words ~0.3 s early: check onsets against the audio energy, not Whisper.

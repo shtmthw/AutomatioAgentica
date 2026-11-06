@@ -27,6 +27,17 @@ PRONUNCIATION: dict[str, str] = {
     # "Claude": "क्लॉड",
 }
 
+# The same for the English dub (tools/dub_en.py, voice "Andrew"). Subtitles keep
+# the written form; only what Andrew says changes. A comma makes him pause there:
+# where a sentence is split over two subtitles and the English is quicker than
+# the subtitles, the wait goes to that comma instead of the middle of a phrase.
+EN_PRONUNCIATION: dict[str, str] = {
+    "The difference is whether": "The difference is, whether",
+    "program's tests in the": "program's tests, in the",
+    "set the boundary": "set the boundary,",
+    "work with language are called": "work with language, are called",
+}
+
 
 def apply(text: str, table: dict[str, str] | None = None) -> str:
     """Return `text` with every dictionary word replaced by its spoken form."""

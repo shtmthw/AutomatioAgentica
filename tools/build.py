@@ -134,9 +134,16 @@ def build_audio(lines, total) -> str:
         voice[a:b] += clip[: b - a]
         s0, s1 = int((t + entry["speech_start"]) * SR), int((t + entry["speech_end"]) * SR)
         speech[s0:s1] = True
+    return mix_voice(voice, speech, total)
+
+
+def mix_voice(voice: np.ndarray, speech: np.ndarray, total: float, tag: str = "") -> str:
+    """Level a mono narration track (SR, float32), duck the music under `speech`
+    (bool mask, same length) and write build/mix{tag}.wav. Returns its path."""
     # measure as the listener hears it: the mono voice is duplicated to both stereo
     # channels, which BS.1770 counts as +3 dB compared with a mono measurement
-    vpath = C.BUILD / "narration_raw.wav"
+    n = len(voice)
+    vpath = C.BUILD / f"narration{tag}_raw.wav"
     sf.write(vpath, np.stack([voice, voice], axis=1), SR, subtype="FLOAT")
     gain_v = 10 ** ((C.VOICE_LUFS - lufs(vpath)) / 20)
     voice *= gain_v
@@ -168,7 +175,7 @@ def build_audio(lines, total) -> str:
     peak = np.max(np.abs(mix))
     if peak > 0.89:  # keep ~1 dB of headroom
         mix *= 0.89 / peak
-    out = C.BUILD / "mix.wav"
+    out = C.BUILD / f"mix{tag}.wav"
     sf.write(out, mix, SR, subtype="PCM_24")
     print(f"  narration gain {20*np.log10(gain_v):+.1f} dB, music gain {20*np.log10(gain_m):+.1f} dB, peak {20*np.log10(max(peak,1e-9)):.1f} dBFS")
     return str(out)

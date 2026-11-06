@@ -45,6 +45,8 @@ narration uses about 6.75k ElevenLabs credits, or nothing with the free `edge` f
 | `output/agentic_ai_intro_hi_1080p_softsubs.mp4` | Same video with the subtitles as a switchable track |
 | `output/agentic_ai_intro_hi_1080p.srt` | English subtitles on their own (e.g. for YouTube) |
 | `output/narration_script_hi_en.md` | Hindi narration + English subtitles, with timestamps |
+| `output/agentic_ai_intro_en_1080p.mp4` | Same video narrated in **English** (Microsoft Andrew), speaking the subtitles at the subtitle times |
+| `output/agentic_ai_intro_en_audio.mp3` | That English audio on its own (e.g. an extra audio track on YouTube) |
 | `output/archive_bangla/` | Subtitles/script of the earlier Bangla version |
 
 ## Structure
@@ -69,6 +71,7 @@ tools/
   build.py                render → concat → mix → subtitles → final MP4
   preview.py              fast low-res render + contact sheet for one scene
   export_script.py        writes the narration script as Markdown
+  dub_en.py               English version: Andrew speaks the subtitles at the subtitle times
 assets/voice/             generated voice clips + manifest.json (timings)
 assets/music/             generated music
 build/                    intermediate files (safe to delete)
@@ -182,6 +185,9 @@ working after a word is respelled.
 
 # Export the narration script
 .venv/bin/python -m tools.export_script
+
+# English version (free, ~3 min, nothing re-rendered): run after `assemble`
+.venv/bin/python -m tools.dub_en               # -> output/agentic_ai_intro_en_1080p.mp4 + _audio.mp3
 ```
 
 Settings in `agentic_video/config.py`:

@@ -58,13 +58,13 @@ def _probe_duration(path) -> float:
 
 
 # ------------------------------------------------------------------ engines
-async def synth_edge(text: str, out, retries: int = 5) -> list:
-    """Speak `text` with Pradeep (edge-tts) into `out` (mp3); return word timings."""
+async def synth_edge(text: str, out, retries: int = 5, voice=None, rate=None, pitch=None) -> list:
+    """Speak `text` with edge-tts (default: config VOICE) into `out` (mp3); return word timings."""
     import edge_tts
     for attempt in range(retries):
         try:
-            comm = edge_tts.Communicate(text, C.VOICE, rate=C.VOICE_RATE, pitch=C.VOICE_PITCH,
-                                        boundary="WordBoundary")
+            comm = edge_tts.Communicate(text, voice or C.VOICE, rate=rate or C.VOICE_RATE,
+                                        pitch=pitch or C.VOICE_PITCH, boundary="WordBoundary")
             words = []
             with open(out, "wb") as f:
                 async for chunk in comm.stream():
