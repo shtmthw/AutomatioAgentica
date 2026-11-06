@@ -8,7 +8,7 @@ editor, stock footage or recorded audio is involved.
 The video it currently produces is **"What is Agentic AI?"**, a ~10½-minute
 introductory lesson for complete beginners:
 
-- **Hindi narration** (ElevenLabs Eleven v4, voice "Adam")
+- **Hindi and English narration** (ElevenLabs Eleven v4, voice "Adam")
 - **English subtitles**, timed sentence by sentence against the narration
 - **English on-screen text**, minimal dark animation style (Manim)
 - 9 chapters: AI models → what an agent is → chatbot vs agent → the agent loop →
