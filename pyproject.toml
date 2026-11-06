@@ -1,0 +1,11 @@
+[project]
+name = "agentic-ai-intro-bn"
+version = "1.0.0"
+description = "Intro lesson video: What is Agentic AI? (Bangla narration, programmatic Manim animation)"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "manim>=0.19",
+    "edge-tts>=7.0",
+    "numpy>=1.26",
+    "soundfile>=0.12",
+]
