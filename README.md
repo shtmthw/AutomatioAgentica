@@ -152,9 +152,9 @@ PRONUNCIATION = {
 **Listen before rebuilding.** This takes a few seconds and writes MP3s to `output/samples/`:
 
 ```bash
-.venv/bin/python -m tools.say "आपने एक AI Agent से कहा"   # with the dictionary (uses credits on ElevenLabs)
-.venv/bin/python -m tools.say "एआई" "ए आई" "ए-आई"         # compare spellings
-.venv/bin/python -m tools.say --raw "AI"                     # without the dictionary
+.venv/bin/python -m tools.say "आपने एक AI Agent से कहा"         # with the dictionary (uses credits on ElevenLabs)
+.venv/bin/python -m tools.say "hello this is an AI Agent"     # compare spellings
+.venv/bin/python -m tools.say --raw "AI"                      # without the dictionary
 ```
 
 **Apply it to the video:**
@@ -191,22 +191,10 @@ working after a word is respelled.
 ```
 
 Settings in `agentic_video/config.py`:
-- `VOICE`: the narrator (`bn-BD-PradeepNeural`)
+- `VOICE`: the narrator (`Andrew`)
 - `VOICE_RATE`, `VOICE_PITCH`: pacing and depth (re-run `voice` after changing)
 - `MUSIC_LUFS`, `DUCK_DB`: how loud the music is and how much it dips under the voice
 - `BURN_SUBTITLES`: turn burned-in subtitles off
 - `FPS`
 
-## Sections
 
-| # | Section | Main visual |
-|---|---|---|
-| 01 | भूमिका | An AI that explains vs. an agent that acts on the same error |
-| 02 | AI Model क्या है? | Data → model; Input → LLM → Output; Context; GPT/Claude/Gemini |
-| 03 | AI Agent क्या है? | Definition; Goal · Model · Tools · Environment · Feedback |
-| 04 | Chatbot बनाम AI Agent | Straight line vs. loop; same chat window, different abilities |
-| 05 | Agent कैसे काम करता है? | The Agent Loop (decide → act → observe → evaluate on one circle, repeat arc) with a weather example that fails, adapts and succeeds |
-| 06 | Tools क्यों ज़रूरी हैं? | Filesystem, Terminal, Browser, API, Database; model decides, tool does |
-| 07 | असली उदाहरण | Agent finds and fixes a divide-by-zero crash, loop by loop |
-| 08 | हकीकत | Risks, permissions, safeguards and human approval |
-| 09 | निष्कर्ष | Recap, roadmap of upcoming lessons, "we'll also build Websites & Apps" (browser + phone mockups that build themselves), title card |
