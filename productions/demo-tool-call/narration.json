@@ -1,0 +1,28 @@
+{
+  "schema": "automatio.narration/1",
+  "title": "What is a tool call?",
+  "source_language": "en",
+  "sections": [
+    {
+      "key": "s01",
+      "chapter": {
+        "number": "01",
+        "title": "Tool calls"
+      },
+      "plan_section": "01",
+      "lines": [
+        {
+          "key": "s01_01",
+          "en": "To act in the real world, an agent makes a {call}tool call.",
+          "hi": "असली दुनिया में काम करने के लिए, Agent एक {call}Tool Call करता है।"
+        },
+        {
+          "key": "s01_02",
+          "en": "The model writes a {request}request, and the tool sends back a {result}result.",
+          "hi": "Model एक {request}अनुरोध लिखता है, और Tool एक {result}नतीजा वापस भेजता है।"
+        }
+      ]
+    }
+  ],
+  "excluded": []
+}

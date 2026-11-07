@@ -1,0 +1,20 @@
+# "What is Agentic AI?" - the reference production (first released Nov 2026), migrated
+# to AutomatioAgentica 2. Everything not listed uses the house defaults, which are the
+# settings this video was made with.
+
+[production]
+title = "What is Agentic AI?"
+source_language = "en"
+script = "inputs/script.md"
+plan = "inputs/plan.md"
+notes = ["inputs/production-notes.md"]
+
+[versions.hi]
+voice = "hindi-adam"        # ElevenLabs eleven_v4, Adam (pNInz6obpgDQGcFmaJgB), stability 0.5, similarity 0.75
+
+[versions.en]
+voice = "english-andrew"    # edge-tts en-US-AndrewMultilingualNeural, -5 %
+
+[subtitles]
+language = "en"
+formats = ["srt", "vtt"]

@@ -1,0 +1,62 @@
+# AutomatioAgentica voice registry ("house voices").
+#
+# Productions pick a profile per language in production.toml ([versions.<lang>] voice = "...").
+# The first two profiles are the exact voices of "What is Agentic AI?" (Nov 2026): same
+# provider voice IDs, models and settings. Do not substitute similar-sounding voices.
+# Changing any setting changes the cache key, so lines would be re-voiced (and paid for).
+#
+# Credentials are never stored here: ElevenLabs reads ELEVENLABS_API_KEY from the
+# harness environment or the gitignored .env file.
+
+[hindi-adam]
+description = "Hindi narrator of 'What is Agentic AI?' - ElevenLabs Adam on eleven_v4 (picked by the user over Brian/Daniel/Liam/Will/Madhur)"
+language = "hi"
+provider = "elevenlabs"
+voice_id = "pNInz6obpgDQGcFmaJgB"      # "Adam" (premade voice; usable on the free API tier)
+voice_name = "Adam"
+model_id = "eleven_v4"
+language_code = "hi"
+stability = 0.5
+similarity_boost = 0.75
+output_format = "mp3_44100_128"
+context = true                         # send previous_text / next_text within a section
+concurrency = 2
+credits_per_char = 1.0
+draft = "hindi-madhur-draft"           # free voice for the draft render (cues/layout) before spending credits
+
+[hindi-adam.pronunciation]
+"AI" = "एआई"                           # the user wants "E-AYE"; subtitles keep "AI"
+
+[english-andrew]
+description = "English narrator of 'What is Agentic AI?' - Microsoft Andrew (edge-tts, free)"
+language = "en"
+provider = "edge"
+voice = "en-US-AndrewMultilingualNeural"
+rate = "-5%"                           # calm teaching pace (the previous production's base pace)
+pitch = "+0Hz"
+latency = 0.045                        # edge-tts word times run ~45 ms ahead of the decoded MP3 (measured)
+
+[hindi-madhur-draft]
+description = "Free Hindi draft voice (Microsoft Madhur): validates cues and layout before ElevenLabs credits are spent"
+language = "hi"
+provider = "edge"
+voice = "hi-IN-MadhurNeural"
+rate = "-6%"
+pitch = "-2Hz"
+latency = 0.045
+
+[hindi-madhur-draft.pronunciation]
+"AI" = "एआई"
+
+# ---- offline test voices (tone bursts, no network, never for real productions) ----
+[test-tone-hi]
+description = "offline test voice (not speech)"
+language = "hi"
+provider = "tone"
+pitch_hz = 150
+
+[test-tone-en]
+description = "offline test voice (not speech)"
+language = "en"
+provider = "tone"
+pitch_hz = 190

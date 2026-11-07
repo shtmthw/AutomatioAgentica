@@ -1,7 +1,7 @@
 [project]
-name = "agentic-ai-intro-bn"
-version = "1.0.0"
-description = "Intro lesson video: What is Agentic AI? (Bangla narration, programmatic Manim animation)"
+name = "automatio-agentica"
+version = "2.0.0"
+description = "Harness-driven video production pipeline: script + plan -> Hindi and English long-form videos (Manim animation, house voices, separate subtitles)"
 requires-python = ">=3.12,<3.13"
 dependencies = [
     "manim>=0.19",
@@ -9,3 +9,9 @@ dependencies = [
     "numpy>=1.26",
     "soundfile>=0.12",
 ]
+
+[project.scripts]
+automatio = "automatio.cli:main"
+
+[tool.setuptools]
+packages = ["automatio", "automatio.providers", "agentic_video"]

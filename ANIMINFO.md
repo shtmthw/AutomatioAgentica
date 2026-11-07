@@ -5,6 +5,10 @@ beginner lesson, "What is Agentic AI?", with **Hindi narration** (ElevenLabs),
 **English subtitles**, **English on-screen text**, and **100% programmatic animation**.
 It covers what worked, what failed, and the path to follow.
 
+> **2.0:** this now runs as a harness-driven pipeline (`python -m automatio`, see
+> [AGENTS.md](AGENTS.md)): two complete videos per production (Hindi + English, each timed
+> to its own narration), English subtitles as separate SRT + VTT files, never burned in.
+
 ---
 
 ## 1. Final stack (use exactly this)
@@ -15,37 +19,36 @@ It covers what worked, what failed, and the path to follow.
 | Voice | **ElevenLabs `eleven_v4`**, built-in voice **Adam** (`pNInz6obpgDQGcFmaJgB`), `language_code="hi"` | Endpoint `POST /v1/text-to-speech/{voice}/with-timestamps` returns `audio_base64` + **character alignment** |
 | Fallback voice | `edge-tts` (`hi-IN-MadhurNeural`) | Free, has word boundaries; slower and more robotic |
 | Music | Synthesised in numpy (pad chords + soft bells + FFT reverb) | No stock assets |
-| Subtitles | Own SRT/ASS writer → burned in with ffmpeg `ass=` (libass) | Font Inter 46px; plus a soft-sub MP4 (`mov_text`) |
+| Subtitles | Own SRT + WebVTT writer, **separate files only** | 1.x burned them in with libass; 2.0 never does (no subtitle filter, no subtitle stream) |
 | Encode | ffmpeg libx264 `-preset slow -crf 17`, AAC 192k, 1080p30 | Scenes concat with `-c copy` first |
 | Fonts | Inter (labels/body), JetBrains Mono (code), Noto Sans Devanagari / Bengali (if local script) | Resolve names via `manimpango.list_fonts()` |
 
-Machine used: 12 cores, no GPU needed. Full scene render ≈ 3–4 min with 5 parallel
-workers; final assembly ≈ 4–5 min.
+12 cores, no GPU: 1080p render of both versions ≈ 8 min (5 workers), assembly ≈ 4 min each.
 
 ---
 
 ## 2. Project layout
 
 ```
-agentic_video/  narration.py (THE script)  pronunciation.py  config.py
-                style.py (palette/fonts)    icons.py  components.py
-                voice.py (VoiceScene: sync + cue logging)  prelude.py
-scenes/         s01_intro.py … s09_outro.py  (one Scene class per chapter)
-tools/          tts.py  eleven.py  subtitles.py  music.py  build.py
-                preview.py (contact sheets)  say.py  export_script.py
-assets/voice/   per-line mp3 + manifest.json (durations + word timings)
-build/          intermediates (cues/, scenes/, logs/, preview/)
-output/         final MP4s, .srt, script .md
+automatio/      the pipeline (stages, state, providers, render, audio, subtitles, verify, deliver, CLI)
+agentic_video/  style.py (palette/fonts)  icons.py  components.py  prelude.py
+                voice.py (VoiceScene: sync + cue logging + layout lint)  runtime.py
+productions/agentic-ai-intro/
+                production.toml  inputs/ (script, plan, notes)  narration.json (THE script, en + hi)
+                scenes/ s01_intro.py … s09_outro.py, thumbnail.py
+voices.toml     the house voices (exact provider IDs + settings + pronunciation)
+cache/          voice clips, scene renders, music (content-addressed)
+build/<slug>/   state.json, tasks/, logs/, drafts, intermediates
+output/<slug>/  hindi/ english/ manifest.json report.md
 .env            ELEVENLABS_API_KEY=... (gitignored)
 ```
 
 Commands:
 ```bash
-.venv/bin/python -m tools.build all -j 5        # voice → render → assemble
-.venv/bin/python -m tools.build render s05      # one scene
-.venv/bin/python -m tools.build assemble        # concat + mix + subs + encode
-.venv/bin/python -m tools.preview s05           # 480p render + per-line contact sheet
-AGENTIC_TTS_ENGINE=edge .venv/bin/python -m tools.tts   # free draft voice (no credits)
+.venv/bin/python -m automatio run agentic-ai-intro              # everything, resumable
+.venv/bin/python -m automatio preview agentic-ai-intro s05 --lang all   # 480p render + contact sheets
+.venv/bin/python -m automatio status agentic-ai-intro
+.venv/bin/python -m automatio say "आपने एक AI Agent से कहा" --voice hindi-adam
 ```
 
 ---
@@ -54,26 +57,25 @@ AGENTIC_TTS_ENGINE=edge .venv/bin/python -m tools.tts   # free draft voice (no c
 
 **Voice first, animation follows.** Never time animations by hand.
 
-1. `narration.py`: each line is `("s05_07", "<Hindi spoken>", "<English subtitle>")`.
-   Same number of sentences in both (sentence i of the subtitle shows while sentence i is spoken).
-2. `tools/tts.py`: one clip per line, cached by a hash of (engine, voice, settings, spoken
-   text). The manifest stores `duration`, `speech_start/end` and `words: [[start, dur, text]]`.
-   ElevenLabs character alignment → words by splitting on whitespace and dropping
-   punctuation-only tokens and `[audio tags]`.
+1. `narration.json`: each line has every language, e.g. `{"key": "s05_07", "en": "...",
+   "hi": "..."}`. Same number of sentences per language (subtitle sentence i shows while
+   sentence i is spoken).
+2. Voice stage: one clip per line and language, cached by hash(provider settings, spoken
+   text). The manifest stores `duration`, `speech_start/end`, `words: [[start, dur, text]]`
+   and every **cue marker** time. ElevenLabs character alignment → words (whitespace
+   split; punctuation-only tokens and `[audio tags]` dropped).
 3. `VoiceScene.say(key)` context manager: records `renderer.time` as the line start, lets
-   you `wait_until(v.word("Browser"))` to hit a spoken word, then waits out the line
-   plus a 0.35 s gap. Writes `build/cues/<scene>.json`.
-4. `build.py` places each clip at its exact cue time (scene offsets come from `ffprobe`
-   on each rendered scene), then subtitles are generated from the same timings.
+   you `wait_until(v.cue("browser"))` to hit the word after the `{browser}` marker, then
+   waits out the line plus a 0.35 s gap. Writes the cue log for that render.
+4. Assembly places each clip at its exact cue time (scene offsets from `ffprobe` on each
+   rendered scene), then subtitles are generated from the same timings.
    Picture, voice and subtitles **cannot drift**.
 
-Cue words (`v.word("...")`) must exist in the **spoken** line. After any script or
-language change, run a static check: parse every `v.word("X")` under its
-`self.say("key")` and confirm X (normalised) appears in that line's spoken text.
-Also check dynamic cue lists. A missing cue raises `KeyError` at render time.
-
-Keep **display text and cue words separate** (e.g. `labels = [...]` for pills vs
-`cue_words = [...]` for timing): once languages differ they never match.
+**Cue markers, not cue words.** `v.word("पूछा")` (1.x) ties a scene to one language.
+Markers go into every language (`"You {ask}ask an AI"` / `"आपने एक AI से {ask}पूछा"`), so
+one scene stays in sync with either narration. `automatio check scenes` confirms every
+`v.cue()` has its marker everywhere. Word order differs (Hindi is SOV): a cue already in
+the past plays immediately. Keep display labels and cue names separate.
 
 ---
 
@@ -138,20 +140,19 @@ to fit inside the ring.
   voices. Free plan has **no commercial licence**. Keys can be **permission-scoped**: a
   key with only Text-to-Speech fails `user_read` / `voices_read` / `models_read` (401).
   Make the code tolerate that.
-- **Pronunciation dictionary** (`pronunciation.py`): word → spoken spelling, applied only
-  to TTS (subtitles keep the original). E.g. `"AI": "एआई"` (user wanted "E-AYE";
-  Bangla equivalent `এআই`). Prefer spelling fixes in the script itself for one-offs
-  (the user corrected `এল` → `এলো`). `tools/say.py` makes quick audition MP3s.
+- **Pronunciation dictionary** (`voices.toml` / `[pronunciation.hi]`): word → spoken
+  spelling, TTS only (subtitles keep the original). `"AI": "एआई"` (user wanted "E-AYE").
+  Prefer script fixes for one-offs. `automatio say` makes audition clips.
 - **Rejected / failed paths (don't repeat):**
   - edge-tts Bangla `bn-BD-PradeepNeural`: user found it "bad"/robotic.
-  - Splicing an English voice (Prabhat) into Bangla sentences, even with pitch/EQ/
-    loudness matching, carrier sentences and Rubber Band, was technically good but the user rejected it.
+  - Splicing an English voice (Prabhat) into Bangla sentences (pitch/EQ/loudness
+    matched, Rubber Band): technically fine, rejected by the user.
   - Azure Speech: user ruled it out (needs a paid key).
 - Hindi narration runs longer than Bangla (≈11.5 chars/s with Adam); the video ended
   at 10:44 vs a 7–9 min target. If length matters, write a tighter script **before**
   spending credits, or time-stretch ~1.1–1.15× in post (formant-preserving).
-- Always do a **free draft** (`AGENTIC_TTS_ENGINE=edge`) to validate cues and layout
-  before spending ElevenLabs credits.
+- Always do a **free draft** before spending credits (the `draft` stage does: Madhur
+  stand-in for uncached Adam lines).
 
 ---
 
@@ -164,8 +165,11 @@ to fit inside the ring.
   (penalise >56 chars, hard cap 68, penalise <18-char fragments), and share time
   proportionally to length. Never split between two English words.
 - Finalise: lead 0.08 s, tail 0.35 s, minimum 0.9 s on screen, never overlap the next cue.
-- ASS style: Inter 46 px, light outline (2.6) in BG colour, bottom margin 44.
-  Validate: no overlaps, max length, minimum duration.
+- On the **English** version the subtitle is the narration itself, so each cue is timed by
+  the words it contains (word-level), not by proportion.
+- Delivered as `subtitles-en.srt` + `subtitles-en.vtt` per version; **never burned in**
+  and never muxed into the MP4. Validate: SRT and VTT agree, no overlaps, order, bounds,
+  max length, reading speed; the whole subtitle script appears in order.
 
 ---
 
@@ -177,23 +181,22 @@ to fit inside the ring.
   5 ms look-ahead, 80 ms release). Don't scale the whole mix down for a few peaks.
 - Music normalised to −33 LUFS, ducked 6 dB under speech with a smoothed (Hann 0.6 s)
   envelope built from known speech intervals (deterministic, no sidechain compressor).
-- Final check: `ebur128` ⇒ I ≈ −16 LUFS, true peak ≤ −1 dB.
-- Soft-sub MP4: **don't use `-shortest`** (the subtitle stream ends early and truncates the
-  video). Use `-t <total>`.
+- Check: `ebur128` ⇒ I ≈ −16 LUFS, true peak ≤ −1 dB. Cut with `-t <total>`, not `-shortest`.
 
 ---
 
 ## 9. Verification loop (do this every time)
 
-1. Render all scenes (1080p30, 5 workers). Grep logs for `Traceback|KeyError|WARNING`.
-2. Compare each scene's video duration with its cue log duration (must match).
-3. `tools.preview` contact sheets: one frame per narration line at 92% of the line.
-   **Look at every sheet** for overflow, overlaps, text off-frame or mid-animation glitches.
-   Then grab full-res frames of the densest spots.
-4. Assemble; `ffprobe` both MP4s (same duration, 1920×1080, 30 fps, AAC stereo,
-   language tags), loudness check, SRT check, and one frame with burned subtitles.
-5. Patch scene text with scripts that **assert each replacement matched**. Silent
-   non-matches caused bugs (literal Unicode vs `\u` escapes).
+Automated by the pipeline except 3 (the agent's `review` task).
+
+1. Render every scene in every language; fail on tracebacks, missing markers, lines not said once in order.
+2. Scene video duration = cue log duration.
+3. Contact sheets (one frame per line at 92%, per language): **look at every sheet** for
+   overflow, overlaps, off-frame text, mid-animation glitches. Layout lint helps.
+4. Verify each MP4: streams (no subtitle stream), durations, every line in order,
+   loudness/true peak, subtitles, narration energy under the cues, subtitle band clear.
+5. Patch scene text with scripts that **assert each replacement matched** (silent
+   non-matches caused bugs).
 
 ---
 
@@ -210,29 +213,16 @@ tagged) → Reality check (risks, permissions, safeguards, human approval gate,
 "more power = more responsibility") → Conclusion (recap cards, roadmap of next lessons,
 website + app mockups building themselves, tracked "AGENTIC AI / THE BEGINNING" title card).
 
-Reuse the same running example (the divide-by-zero crash) in the intro and the
-bug-fix chapter. It gives the lesson a satisfying arc.
+Reusing the divide-by-zero crash in the intro and the bug-fix chapter gives a satisfying arc.
 
 ---
 
-## 11. English dub (same video, English voice)
+## 11. English version
 
-`python -m tools.dub_en` makes `output/agentic_ai_intro_en_1080p.mp4`: the finished
-video with **Microsoft Andrew** (`en-US-AndrewMultilingualNeural`, edge-tts, free)
-speaking the English subtitles. Nothing is re-rendered: the video stream (with the
-burned-in subtitles) is stream-copied from the Hindi MP4, so the picture is bit-identical.
-
-- Subtitle cues are rebuilt from the same timeline and must equal the `.srt` byte for byte.
-- One edge-tts clip per **English sentence** (natural intonation), cut in word gaps
-  between its cues. Rules: a cue's words start after the cue appears and are over before
-  the next cue appears. Too long: re-speak faster (+5 % steps). English is ~30 % shorter
-  than the Hindi, so a sentence split over two cues has to wait at the cut. Waiting
-  1–2 s mid-phrase sounded broken. Fixed by: base pace −5 %; such sentences may be spoken
-  up to −15 % and start ≤0.3 s late; the remaining wait goes to a comma. Spoken-only
-  commas live in `EN_PRONUNCIATION` (e.g. "The difference is, whether …").
-- edge-tts word times run ~45 ms ahead of the decoded MP3 (measured): compensated (`LAT`).
-- Cuts snap to the quietest 5 ms near the word gap, with 6 ms fades.
-- Verify: video MD5 equal to the Hindi MP4; `ebur128` ≈ −16 LUFS; voice energy only while a
-  subtitle is on screen; Whisper (`small.en`, word timestamps) matched 98.5 % of subtitle
-  words in order (the rest were ASR spellings like "80" or "file system"). Whisper puts
-  sentence-initial words ~0.3 s early: check onsets against the audio energy, not Whisper.
+1.x dubbed the finished Hindi video (Andrew speaking the subtitles inside the Hindi
+subtitle windows, burned-in picture): animation stayed cued to Hindi words and short
+English sentences waited mid-phrase. **2.0 renders the English version on its own:** same
+scenes and visuals, cues on the English narration, Andrew at a constant −5 %, subtitles
+word-timed. It is shorter than the Hindi (8:23 vs 10:44) because nothing is padded.
+edge-tts word times run ~45 ms ahead of the decoded MP3 (profile `latency = 0.045`).
+Whisper puts sentence-initial words ~0.3 s early: check onsets against audio energy.

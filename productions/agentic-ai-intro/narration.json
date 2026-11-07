@@ -1,0 +1,578 @@
+{
+  "schema": "automatio.narration/1",
+  "title": "What is Agentic AI?",
+  "source_language": "en",
+  "sections": [
+    {
+      "key": "s01",
+      "chapter": {
+        "number": "01",
+        "title": "Introduction"
+      },
+      "plan_section": "01",
+      "lines": [
+        {
+          "key": "s01_01",
+          "en": "Imagine you're running a program, and suddenly an {error}error appears.",
+          "hi": "मान लीजिए, कोई प्रोग्राम चलाते समय अचानक एक {error}Error आ गया।"
+        },
+        {
+          "key": "s01_02",
+          "en": "You {ask}ask an AI: what does this error mean?",
+          "hi": "आपने एक AI से {ask}पूछा, इस Error का मतलब क्या है?"
+        },
+        {
+          "key": "s01_03",
+          "en": "The AI explains nicely where the problem might be.",
+          "hi": "AI ने अच्छे से समझा दिया कि दिक्कत कहाँ हो सकती है।"
+        },
+        {
+          "key": "s01_04",
+          "en": "But the job of actually {fix}fixing it is still left to you.",
+          "hi": "लेकिन उस दिक्कत को {fix}ठीक करने का काम, अभी भी आपके ही हाथ में रह गया।"
+        },
+        {
+          "key": "s01_05",
+          "en": "Now picture the same situation a little differently.",
+          "hi": "अब यही स्थिति, थोड़ा अलग तरीके से सोचिए।"
+        },
+        {
+          "key": "s01_06",
+          "en": "You tell an AI agent: find the error, understand its cause, and fix it.",
+          "hi": "आपने एक AI Agent से कहा, Error को ढूँढो, उसकी वजह समझो, और उसे ठीक कर दो।"
+        },
+        {
+          "key": "s01_07",
+          "en": "The agent opens the project's files by itself and {commands}runs commands.",
+          "hi": "Agent खुद प्रोजेक्ट की Files खोलकर देख रहा है, {commands}Commands चला रहा है।"
+        },
+        {
+          "key": "s01_08",
+          "en": "It hits an error, {fix}fixes the code based on it, and {check}then checks again.",
+          "hi": "उसे एक Error मिला, उसे देखकर उसने {fix}Code ठीक किया, और {check}फिर से जाँच की।"
+        },
+        {
+          "key": "s01_09",
+          "en": "The first AI gives us information. The {second}second one takes action itself to reach the goal.",
+          "hi": "पहला AI हमें जानकारी देता है। और {second}दूसरा, लक्ष्य पूरा करने के लिए खुद काम करता है।"
+        },
+        {
+          "key": "s01_10",
+          "en": "That difference is the core idea of {agentic}Agentic AI. But {how}how is this actually possible? Let's start from the very beginning.",
+          "hi": "यही फ़र्क {agentic}Agentic AI का मूल विचार है। लेकिन यह असल में मुमकिन {how}कैसे होता है? चलिए, बिल्कुल शुरुआत से देखते हैं।"
+        }
+      ]
+    },
+    {
+      "key": "s02",
+      "chapter": {
+        "number": "02",
+        "title": "What is an AI model?"
+      },
+      "plan_section": "02",
+      "lines": [
+        {
+          "key": "s02_01",
+          "en": "Before we understand agents, we need to understand what an AI {model}model really is.",
+          "hi": "Agent को समझने से पहले, हमें समझना होगा कि AI {model}Model असल में क्या है।"
+        },
+        {
+          "key": "s02_02",
+          "en": "An AI model is a program that has {learned}learned from a {huge}huge amount of data.",
+          "hi": "AI Model एक ऐसा प्रोग्राम है, जिसने {huge}बहुत बड़ी मात्रा में डेटा से {learned}सीखा है।"
+        },
+        {
+          "key": "s02_03",
+          "en": "Models that work with language are called {large}Large Language Models, or {llm}LLMs for short.",
+          "hi": "जो Models भाषा के साथ काम करते हैं, उन्हें {large}Large Language Model कहते हैं, छोटे में {llm}LLM।"
+        },
+        {
+          "key": "s02_04",
+          "en": "By reading countless texts, they've learned how people {questions}ask questions, {explanations}explain things, and {answers}give answers.",
+          "hi": "इन्होंने अनगिनत लेख पढ़कर सीखा है कि इंसान कैसे {questions}सवाल पूछते हैं, {explanations}समझाते हैं, और {answers}जवाब देते हैं।"
+        },
+        {
+          "key": "s02_05",
+          "en": "The way it works is very simple. You {write}give it some text, which is called the {input}input.",
+          "hi": "इसके काम करने का तरीका बहुत आसान है। आप कुछ {write}लिखकर देते हैं, इसे {input}Input कहते हैं।"
+        },
+        {
+          "key": "s02_06",
+          "en": "The model reads that input and tries to understand it.",
+          "hi": "Model उस Input को पढ़ता है, और समझने की कोशिश करता है।"
+        },
+        {
+          "key": "s02_07",
+          "en": "Everything the model can see at once is called its {context}context.",
+          "hi": "Model जो कुछ भी एक साथ सामने देख पाता है, उसे {context}Context कहते हैं, यानी संदर्भ।"
+        },
+        {
+          "key": "s02_08",
+          "en": "Then the model generates new text and gives it back. That's the {output}output.",
+          "hi": "फिर Model नया टेक्स्ट बनाकर वापस देता है। यही है {output}Output।"
+        },
+        {
+          "key": "s02_09",
+          "en": "{gpt}GPT, {claude}Claude and {gemini}Gemini are all examples of large language models.",
+          "hi": "{gpt}GPT, {claude}Claude, {gemini}Gemini, ये सभी Large Language Model के उदाहरण हैं।"
+        },
+        {
+          "key": "s02_10",
+          "en": "But notice one thing. On its own, a model {only}only produces text. It doesn't {file}open files or {program}run programs by itself.",
+          "hi": "लेकिन एक बात पर ध्यान दीजिए। Model खुद {only}सिर्फ़ टेक्स्ट बनाता है। यह अपने आप कोई {file}File नहीं खोलता, कोई {program}प्रोग्राम भी नहीं चलाता।"
+        },
+        {
+          "key": "s02_11",
+          "en": "So where does the power to actually do things come from?",
+          "hi": "तो फिर असली काम करने की ताकत आती कहाँ से है?"
+        }
+      ]
+    },
+    {
+      "key": "s03",
+      "chapter": {
+        "number": "03",
+        "title": "What is an AI agent?"
+      },
+      "plan_section": "03",
+      "lines": [
+        {
+          "key": "s03_01",
+          "en": "This is where the AI agent comes in.",
+          "hi": "यहीं पर आता है AI Agent।"
+        },
+        {
+          "key": "s03_02",
+          "en": "An AI agent is a {system}system that uses an AI {model}model to work toward a {goal}goal.",
+          "hi": "AI Agent एक ऐसा {system}System है, जो एक AI {model}Model का इस्तेमाल करके, किसी {goal}लक्ष्य की ओर काम करता है।"
+        },
+        {
+          "key": "s03_03",
+          "en": "It {decisions}makes decisions, {tools}acts using tools, {results}looks at the results, and then {next}decides what to do next.",
+          "hi": "यह {decisions}फ़ैसले लेता है, {tools}Tools की मदद से काम करता है, {results}नतीजे देखता है, और फिर तय करता है कि {next}आगे क्या करना है।"
+        },
+        {
+          "key": "s03_04",
+          "en": "An agent has five basic parts. Let's look at them one by one.",
+          "hi": "एक Agent के पाँच बुनियादी हिस्से होते हैं। चलिए, एक-एक करके देखते हैं।"
+        },
+        {
+          "key": "s03_05",
+          "en": "First, the {goal}goal. What are we actually trying to achieve?",
+          "hi": "पहला है {goal}Goal, यानी लक्ष्य। हम असल में क्या हासिल करना चाहते हैं।"
+        },
+        {
+          "key": "s03_06",
+          "en": "Second, the {model}model. This is the agent's {thinking}thinking part, which reasons and makes decisions.",
+          "hi": "दूसरा है {model}Model। यही Agent का {thinking}सोचने वाला हिस्सा है, जो सोचता है और फ़ैसले लेता है।"
+        },
+        {
+          "key": "s03_07",
+          "en": "Third, {tools}tools. Through them, the agent can work with outside systems.",
+          "hi": "तीसरा है {tools}Tools, यानी औज़ार। इन्हीं के ज़रिए Agent बाहरी Systems के साथ काम कर पाता है।"
+        },
+        {
+          "key": "s03_08",
+          "en": "Fourth, the {environment}environment. The world or system the agent works inside, {like}like your computer or a project.",
+          "hi": "चौथा है {environment}Environment, यानी माहौल। वह दुनिया या System, जिसके अंदर Agent काम कर रहा है, {like}जैसे आपका कंप्यूटर, या कोई प्रोजेक्ट।"
+        },
+        {
+          "key": "s03_09",
+          "en": "And fifth, {feedback}feedback. {action}The information that comes back after an action.",
+          "hi": "और पाँचवाँ है {feedback}Feedback, यानी प्रतिक्रिया। कोई {action}काम करने के बाद, जो जानकारी वापस आती है।"
+        },
+        {
+          "key": "s03_10",
+          "en": "Notice that the {model}model is just one part of the whole {system}system. An AI model on its own and a {complete}complete AI agent are not the same thing.",
+          "hi": "ध्यान दीजिए, {model}Model यहाँ पूरे {system}System का सिर्फ़ एक हिस्सा है। सिर्फ़ एक AI Model, और एक {complete}पूरा AI Agent, एक ही चीज़ नहीं हैं।"
+        }
+      ]
+    },
+    {
+      "key": "s04",
+      "chapter": {
+        "number": "04",
+        "title": "Chatbot vs AI agent"
+      },
+      "plan_section": "04",
+      "lines": [
+        {
+          "key": "s04_01",
+          "en": "Now let's compare. A regular chatbot, and an AI agent.",
+          "hi": "अब तुलना करते हैं। एक आम Chatbot, और एक AI Agent।"
+        },
+        {
+          "key": "s04_02",
+          "en": "A chatbot receives a question.",
+          "hi": "Chatbot को एक सवाल मिलता है।"
+        },
+        {
+          "key": "s04_03",
+          "en": "It generates an answer to that question.",
+          "hi": "वह उस सवाल का एक जवाब बनाता है।"
+        },
+        {
+          "key": "s04_04",
+          "en": "And it hands the answer back to you. That's it, job done.",
+          "hi": "और जवाब आपको लौटा देता है। बस, काम खत्म।"
+        },
+        {
+          "key": "s04_05",
+          "en": "An agent, on the other hand, receives a goal.",
+          "hi": "दूसरी तरफ़, Agent को मिलता है एक लक्ष्य।"
+        },
+        {
+          "key": "s04_06",
+          "en": "It works out what needs to be done to reach that goal.",
+          "hi": "वह तय करता है कि लक्ष्य तक पहुँचने के लिए क्या-क्या करना होगा।"
+        },
+        {
+          "key": "s04_07",
+          "en": "It picks the right tool for the job.",
+          "hi": "काम के लिए सही Tool चुनता है।"
+        },
+        {
+          "key": "s04_08",
+          "en": "Then it performs the actual work.",
+          "hi": "फिर असली काम करता है।"
+        },
+        {
+          "key": "s04_09",
+          "en": "It observes the result of that work.",
+          "hi": "काम के नतीजे को देखता है।"
+        },
+        {
+          "key": "s04_10",
+          "en": "And it keeps going like this until the goal is reached, {or}or until it needs a {human}human's help.",
+          "hi": "और जब तक लक्ष्य पूरा न हो जाए, {or}या {human}इंसान की मदद की ज़रूरत न पड़े, ऐसे ही चलता रहता है।"
+        },
+        {
+          "key": "s04_11",
+          "en": "One important point. You can talk to an agent through a chat window too.",
+          "hi": "एक ज़रूरी बात। Agent से भी आप Chat करके ही बात कर सकते हैं।"
+        },
+        {
+          "key": "s04_12",
+          "en": "So the difference isn't how it looks. The {difference}difference is whether the system can take action itself and {goal}move toward a goal.",
+          "hi": "इसलिए फ़र्क इसमें नहीं है कि वह दिखता कैसा है। {difference}फ़र्क यह है कि System खुद काम कर सकता है या नहीं, और {goal}लक्ष्य की ओर बढ़ सकता है या नहीं।"
+        }
+      ]
+    },
+    {
+      "key": "s05",
+      "chapter": {
+        "number": "05",
+        "title": "How does an agent work?"
+      },
+      "plan_section": "05",
+      "lines": [
+        {
+          "key": "s05_01",
+          "en": "Now for the most important part. How does an agent actually work?",
+          "hi": "अब आते हैं सबसे ज़रूरी हिस्से पर। एक Agent असल में काम कैसे करता है?"
+        },
+        {
+          "key": "s05_02",
+          "en": "At its core is a {cycle}cycle called the agent {loop}loop.",
+          "hi": "इसके केंद्र में एक {cycle}चक्र है, जिसे Agent {loop}Loop कहते हैं।"
+        },
+        {
+          "key": "s05_03",
+          "en": "Step one: receive the {goal}goal. The user gives the agent an instruction.",
+          "hi": "पहला कदम, {goal}Goal लेना। यूज़र Agent को एक निर्देश देता है।"
+        },
+        {
+          "key": "s05_04",
+          "en": "For example: tell me whether it will rain in Delhi tomorrow.",
+          "hi": "जैसे मान लीजिए, बताओ कल दिल्ली में बारिश होगी या नहीं।"
+        },
+        {
+          "key": "s05_05",
+          "en": "Step two: {decide}decide. The {model}model decides what the next action should be.",
+          "hi": "दूसरा कदम, {decide}Decide, यानी फ़ैसला। {model}Model तय करता है कि अब अगला काम क्या होगा।"
+        },
+        {
+          "key": "s05_06",
+          "en": "Here it thinks: let's check a weather website.",
+          "hi": "यहाँ उसने सोचा, चलो मौसम की एक Website देखते हैं।"
+        },
+        {
+          "key": "s05_07",
+          "en": "Step three: {act}act. The agent uses a tool to do that work. Here, it {browser}opens the website with a browser.",
+          "hi": "तीसरा कदम, {act}Act, यानी काम। Agent एक Tool से वह काम करता है। यहाँ उसने {browser}Browser से Website खोली।"
+        },
+        {
+          "key": "s05_08",
+          "en": "Step four: {observe}observe. The tool returns a result. But it turns out the page {load}didn't even load.",
+          "hi": "चौथा कदम, {observe}Observe, यानी देखना। Tool एक नतीजा लौटाता है। लेकिन पता चला, Page तो {load}लोड ही नहीं हुआ।"
+        },
+        {
+          "key": "s05_09",
+          "en": "Step five: {evaluate}evaluate. The agent checks: has the goal been reached? {no}No, not yet.",
+          "hi": "पाँचवाँ कदम, {evaluate}Evaluate, यानी जाँच। Agent देखता है, क्या लक्ष्य पूरा हुआ? {no}नहीं, अभी नहीं।"
+        },
+        {
+          "key": "s05_10",
+          "en": "So the loop starts again.",
+          "hi": "इसलिए चक्र फिर से शुरू होता है।"
+        },
+        {
+          "key": "s05_11",
+          "en": "This time, the agent decides to try a different website.",
+          "hi": "इस बार Agent ने तय किया कि वह कोई दूसरी Website आज़माएगा।"
+        },
+        {
+          "key": "s05_12",
+          "en": "The {browser}browser works again. And this time the {result}result comes back: an eighty percent chance of rain.",
+          "hi": "{browser}Browser ने फिर काम किया। और इस बार {result}नतीजा आया, बारिश की संभावना अस्सी प्रतिशत।"
+        },
+        {
+          "key": "s05_13",
+          "en": "{check}Checking again, the goal has been reached. So the agent gives you the {answer}answer.",
+          "hi": "{check}जाँच करने पर पता चला कि लक्ष्य पूरा हो गया। इसलिए Agent ने आपको {answer}जवाब बता दिया।"
+        },
+        {
+          "key": "s05_14",
+          "en": "Notice that the agent didn't know every step from the start. After each {result}result, it adjusted its next decision.",
+          "hi": "ध्यान दीजिए, Agent को शुरू से सारे कदम पता नहीं थे। हर {result}नतीजे को देखकर, उसने अपना अगला फ़ैसला बदला।"
+        },
+        {
+          "key": "s05_15",
+          "en": "That's the agent loop. {decide}Decide, {act}act, {observe}observe, {evaluate}evaluate, and if needed, {again}again.",
+          "hi": "यही है Agent Loop। {decide}Decide, {act}Act, {observe}Observe, {evaluate}Evaluate, और ज़रूरत हो तो, {again}फिर से।"
+        }
+      ]
+    },
+    {
+      "key": "s06",
+      "chapter": {
+        "number": "06",
+        "title": "Why agents need tools"
+      },
+      "plan_section": "06",
+      "lines": [
+        {
+          "key": "s06_01",
+          "en": "We keep talking about tools. But {why}why does an agent need them?",
+          "hi": "हम बार-बार Tools की बात कर रहे हैं। लेकिन Agent को Tools की ज़रूरत {why}क्यों है?"
+        },
+        {
+          "key": "s06_02",
+          "en": "Because a model on its own can only {text}produce text. To work with the {outside}outside world, it needs tools.",
+          "hi": "क्योंकि Model खुद सिर्फ़ {text}टेक्स्ट बना सकता है। {outside}बाहरी दुनिया के साथ काम करने के लिए, उसे Tools चाहिए।"
+        },
+        {
+          "key": "s06_03",
+          "en": "Take the filesystem. With it, files can be {read}read, new files {create}created, and existing files {change}changed.",
+          "hi": "जैसे, Filesystem। इससे Files {read}पढ़ी जा सकती हैं, नई File {create}बनाई जा सकती है, और Files {change}बदली जा सकती हैं।"
+        },
+        {
+          "key": "s06_04",
+          "en": "With a terminal, commands and programs can be run.",
+          "hi": "Terminal से Commands और प्रोग्राम चलाए जा सकते हैं।"
+        },
+        {
+          "key": "s06_05",
+          "en": "With a browser, {info}information can be fetched from websites.",
+          "hi": "Browser से अलग-अलग Websites से {info}जानकारी लाई जा सकती है।"
+        },
+        {
+          "key": "s06_06",
+          "en": "With an API, it can {talk}talk to another service, like a weather or maps service.",
+          "hi": "API से किसी दूसरी Service के साथ {talk}बात की जा सकती है, जैसे मौसम या मैप की Service।"
+        },
+        {
+          "key": "s06_07",
+          "en": "And with a database, structured information can be {search}searched and {update}updated.",
+          "hi": "और Database से व्यवस्थित जानकारी {search}खोजी और {update}बदली जा सकती है।"
+        },
+        {
+          "key": "s06_08",
+          "en": "There's an important distinction here.",
+          "hi": "यहाँ एक ज़रूरी फ़र्क है।"
+        },
+        {
+          "key": "s06_09",
+          "en": "The model decides which {tool}tool is needed and what should be done. It only {request}sends a request.",
+          "hi": "Model तय करता है कि कौन सा {tool}Tool चाहिए, और क्या काम करना है। वह सिर्फ़ एक {request}अनुरोध भेजता है।"
+        },
+        {
+          "key": "s06_10",
+          "en": "The tool does the actual work. Then it {result}sends the result back to the model.",
+          "hi": "असली काम Tool खुद करता है। फिर {result}नतीजा Model के पास वापस भेजता है।"
+        },
+        {
+          "key": "s06_11",
+          "en": "Put simply, the model is the {brain}brain, and the tools are the {hands}hands.",
+          "hi": "आसान शब्दों में, Model है {brain}दिमाग, और Tool हैं {hands}हाथ।"
+        }
+      ]
+    },
+    {
+      "key": "s07",
+      "chapter": {
+        "number": "07",
+        "title": "Real example: fixing a bug"
+      },
+      "plan_section": "07",
+      "lines": [
+        {
+          "key": "s07_01",
+          "en": "Now let's see everything together in a real example.",
+          "hi": "अब सब कुछ एक साथ देखते हैं, एक असली उदाहरण में।"
+        },
+        {
+          "key": "s07_02",
+          "en": "The user tells the agent: the program is crashing, {find}find the cause and fix it.",
+          "hi": "यूज़र ने Agent से कहा, प्रोग्राम Crash हो रहा है, वजह {find}ढूँढकर इसे ठीक कर दो।"
+        },
+        {
+          "key": "s07_03",
+          "en": "The program is a small calculator app that computes the {average}average of some numbers.",
+          "hi": "यह प्रोग्राम एक छोटा सा हिसाब वाला ऐप है, जो कुछ संख्याओं का {average}औसत निकालता है।"
+        },
+        {
+          "key": "s07_04",
+          "en": "First, the agent looks at the list of files in the project.",
+          "hi": "सबसे पहले Agent ने प्रोजेक्ट की Files की लिस्ट देखी।"
+        },
+        {
+          "key": "s07_05",
+          "en": "From the names, the calculation seems to live in {stats}stats.py. So the agent {open}opens it and {read}reads the code.",
+          "hi": "नाम देखकर लगता है कि हिसाब का काम {stats}stats नाम की File में होता है। इसलिए Agent ने उसे {open}खोलकर Code {read}पढ़ा।"
+        },
+        {
+          "key": "s07_06",
+          "en": "Then it {terminal}runs the program's tests in the terminal to see the problem for itself.",
+          "hi": "फिर उसने {terminal}Terminal में प्रोग्राम के Tests चलाए, ताकि दिक्कत खुद देखी जा सके।"
+        },
+        {
+          "key": "s07_07",
+          "en": "A test {fail}fails. The error is {zero}ZeroDivisionError, a division by zero.",
+          "hi": "Test {fail}फ़ेल हो गया। Error आया, {zero}Zero Division Error, यानी शून्य से भाग।"
+        },
+        {
+          "key": "s07_08",
+          "en": "The agent looks closely at the error. When the {list}list has no numbers, the program tries to {divide}divide by zero.",
+          "hi": "Agent ने Error को ध्यान से देखा। {list}लिस्ट में कोई संख्या न हो, तो प्रोग्राम {divide}शून्य से भाग देने की कोशिश करता है।"
+        },
+        {
+          "key": "s07_09",
+          "en": "So it makes a small change to the code. If the list is {empty}empty, return zero right away.",
+          "hi": "इसलिए उसने Code में एक छोटा सा बदलाव किया। लिस्ट {empty}खाली हो, तो पहले ही शून्य लौटा दो।"
+        },
+        {
+          "key": "s07_10",
+          "en": "Then it runs the tests again.",
+          "hi": "फिर उसने दोबारा Tests चलाए।"
+        },
+        {
+          "key": "s07_11",
+          "en": "This time all the tests pass. The agent {check}checks and confirms the goal is reached.",
+          "hi": "इस बार सारे Tests पास हो गए। Agent ने {check}जाँच करके देखा कि लक्ष्य पूरा हो गया।"
+        },
+        {
+          "key": "s07_12",
+          "en": "Finally, the agent reports {problem}what the problem was, {fix}what it changed, and {result}that everything works now.",
+          "hi": "आखिर में Agent ने बताया कि {problem}दिक्कत क्या थी, क्या {fix}बदला, और अब {result}सब कुछ ठीक है।"
+        },
+        {
+          "key": "s07_13",
+          "en": "See? {goal}Goal, {model}model, {tools}tools, {environment}environment and {feedback}feedback, all five parts worked together here. And at every step, the agent {loop}loop went around again.",
+          "hi": "देखा आपने? {goal}Goal, {model}Model, {tools}Tools, {environment}Environment और {feedback}Feedback, पाँचों हिस्सों ने यहाँ एक साथ काम किया। और हर कदम पर, Agent {loop}Loop बार-बार घूमा।"
+        }
+      ]
+    },
+    {
+      "key": "s08",
+      "chapter": {
+        "number": "08",
+        "title": "Reality check: not magic"
+      },
+      "plan_section": "08",
+      "lines": [
+        {
+          "key": "s08_01",
+          "en": "But one thing is important to remember. AI agents are {powerful}powerful, {magic}but they're not magic.",
+          "hi": "लेकिन एक बात याद रखना ज़रूरी है। AI Agent {powerful}ताकतवर है, लेकिन {magic}जादू नहीं।"
+        },
+        {
+          "key": "s08_02",
+          "en": "An agent can make wrong decisions.",
+          "hi": "Agent गलत फ़ैसले ले सकता है।"
+        },
+        {
+          "key": "s08_03",
+          "en": "It can use tools incorrectly.",
+          "hi": "Tools का गलत इस्तेमाल कर सकता है।"
+        },
+        {
+          "key": "s08_04",
+          "en": "It can even change, or delete, important files or data.",
+          "hi": "यहाँ तक कि ज़रूरी Files या जानकारी बदल सकता है, या मिटा भी सकता है।"
+        },
+        {
+          "key": "s08_05",
+          "en": "Sometimes it repeats the same action and gets stuck in a loop.",
+          "hi": "कभी-कभी एक ही काम बार-बार करके, एक चक्र में फँस सकता है।"
+        },
+        {
+          "key": "s08_06",
+          "en": "That's why an agent needs {permissions}permissions. It needs {safeguards}safeguards. And it needs human {oversight}oversight.",
+          "hi": "इसलिए Agent को चाहिए {permissions}Permission, यानी इजाज़त। चाहिए {safeguards}Safeguard, यानी सुरक्षा के इंतज़ाम। और चाहिए इंसान की {oversight}निगरानी।"
+        },
+        {
+          "key": "s08_07",
+          "en": "We are the ones who set the {boundary}boundary of what an agent can and {cannot}cannot do.",
+          "hi": "Agent कौन से काम कर सकता है, और कौन से {cannot}नहीं, वह {boundary}सीमा हम ही तय करते हैं।"
+        },
+        {
+          "key": "s08_08",
+          "en": "Remember: the more power you give an AI, the greater your {responsibility}responsibility to keep that power under control.",
+          "hi": "याद रखिए, AI को जितनी ज़्यादा ताकत देंगे, उस ताकत को काबू में रखने की {responsibility}ज़िम्मेदारी भी उतनी ही ज़्यादा होगी।"
+        }
+      ]
+    },
+    {
+      "key": "s09",
+      "chapter": {
+        "number": "09",
+        "title": "Conclusion"
+      },
+      "plan_section": "09",
+      "lines": [
+        {
+          "key": "s09_01",
+          "en": "Now you understand {what}what an AI agent really is, {how}how it works, and {differs}how it differs from a regular chatbot.",
+          "hi": "अब आप समझ गए हैं कि AI Agent असल में {what}क्या है, यह {how}कैसे काम करता है, और एक आम Chatbot से इसका {differs}फ़र्क कहाँ है।"
+        },
+        {
+          "key": "s09_02",
+          "en": "But so far, we've only seen the most {basic}basic ideas of Agentic AI.",
+          "hi": "लेकिन अभी तक हमने Agentic AI के सिर्फ़ बिल्कुल {basic}बुनियादी विचार देखे हैं।"
+        },
+        {
+          "key": "s09_03",
+          "en": "In the upcoming lessons, we'll go much deeper.",
+          "hi": "आने वाले Lessons में हम और गहराई में जाएँगे।"
+        },
+        {
+          "key": "s09_04",
+          "en": "We'll see how an agent's {architecture}architecture works, along with {tool}tool integration, {context}context management, {memory}memory, {planning}planning, and how {agentic}agentic systems are built.",
+          "hi": "समझेंगे कि Agent के अंदर का {architecture}Architecture कैसे काम करता है, {tool}Tool Integration, {context}Context Management, {memory}Memory, {planning}Planning, और {agentic}Agentic Systems कैसे बनाए जाते हैं।"
+        },
+        {
+          "key": "s09_05",
+          "en": "And that's not all: we'll also learn to build {website}websites and {app}apps ourselves.",
+          "hi": "और सिर्फ़ इतना ही नहीं, हम खुद {website}Websites और {app}Apps बनाना भी सीखेंगे।"
+        },
+        {
+          "key": "s09_06",
+          "en": "This was just the {beginning}beginning of our journey into Agentic AI.",
+          "hi": "यह था Agentic AI सीखने के हमारे सफ़र की बस {beginning}शुरुआत।"
+        }
+      ]
+    }
+  ],
+  "excluded": []
+}

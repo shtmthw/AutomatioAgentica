@@ -1,0 +1,28 @@
+# AutomatioAgentica production.
+# Defaults reproduce the house style of "What is Agentic AI?" (Nov 2026): Manim
+# animation, voice-first timing, -16 LUFS mix with ducked ambient music, 1080p30
+# H.264 CRF 17, English subtitles as separate SRT + VTT files (never burned in).
+# Change only what this production needs. Voices are profiles from voices.toml.
+
+[production]
+title = "What is a tool call?"
+source_language = "en"
+script = "inputs/script.md"
+plan = "inputs/plan.md"
+notes = []
+
+[versions.hi]
+voice = "hindi-adam"   # elevenlabs pNInz6obpgDQGcFmaJgB (Adam, eleven_v4)
+
+[versions.en]
+voice = "english-andrew"   # edge en-US-AndrewMultilingualNeural (-5%)
+
+[subtitles]
+language = "en"
+formats = ["srt", "vtt"]
+
+# [video]   width, height, fps, quality, encoder ("libx264" | "copy"), crf, preset, audio_bitrate
+# [audio]   voice_lufs, music_lufs, duck_db, line_gap, limiter_db, music ("ambient" | "none")
+# [review]  draft (free low-res draft before paid voices), visual_review (agent checks contact sheets)
+# [render]  jobs (parallel Manim processes), timeout
+# [pronunciation.hi]  production-specific respellings, e.g. "LLM" = "एल एल एम"
