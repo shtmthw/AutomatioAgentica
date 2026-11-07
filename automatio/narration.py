@@ -154,8 +154,15 @@ def load_narration(path: Path) -> Narration | None:
     return Narration(path, data)
 
 
-def validate(narr: Narration, *, langs: list[str], subtitle_lang: str, source_lang: str) -> dict:
-    """Structure + per-language checks. Returns {"errors": [...], "warnings": [...]}."""
+def validate(narr: Narration, *, langs: list[str], subtitle_lang: str, source_lang: str,
+             marker_langs: list[str] | None = None, dub_langs: list[str] | None = None) -> dict:
+    """Structure + per-language checks. Returns {"errors": [...], "warnings": [...]}.
+
+    `marker_langs`: languages that must carry the same cue markers as the source (default: all).
+    `dub_langs`: dub versions. They are not rendered (no markers needed) and are not subtitled
+    (they share the master's subtitles), so sentence parity is a warning, and a line that quotes
+    on-screen English verbatim is allowed (warning)."""
+    dub_langs = set(dub_langs or [])
     errors, warnings = [], []
     if narr.data.get("schema") != SCHEMA:
         warnings.append(f"schema should be {SCHEMA!r}")
@@ -191,6 +198,8 @@ def validate(narr: Narration, *, langs: list[str], subtitle_lang: str, source_la
                     warnings.append(f"{where} {l}: {bad!r} is not a valid marker (use lowercase {{name}})")
             ref = marks[source_lang]
             for l, m in marks.items():
+                if marker_langs is not None and l not in marker_langs:
+                    continue
                 if set(m) != set(ref):
                     errors.append(f"{where} markers differ: {source_lang}={ref} {l}={m}")
                 elif m != ref:
@@ -199,14 +208,17 @@ def validate(narr: Narration, *, langs: list[str], subtitle_lang: str, source_la
             ns = {l: len(sentences(display(ln[l]))) for l in required}
             for l in langs:
                 if l != subtitle_lang and ns[l] != ns[subtitle_lang]:
-                    errors.append(f"{where} {l} has {ns[l]} sentence(s) but the {subtitle_lang} subtitle text has "
-                                  f"{ns[subtitle_lang]}; subtitle sentence i is shown while sentence i is spoken")
+                    (warnings if l in dub_langs else errors).append(
+                        f"{where} {l} has {ns[l]} sentence(s) but the {subtitle_lang} subtitle text has "
+                        f"{ns[subtitle_lang]}; subtitle sentence i is shown while sentence i is spoken")
             for l in required:
                 pat = SCRIPTS.get(l)
                 if pat and not pat.search(ln[l]):
-                    errors.append(f"{where} {l} text contains no {l} script characters (untranslated?)")
+                    (warnings if l in dub_langs else errors).append(
+                        f"{where} {l} text contains no {l} script characters (untranslated?)")
                 if l != source_lang and display(ln[l]) == display(ln[source_lang]):
-                    errors.append(f"{where} {l} text is identical to {source_lang} (untranslated)")
+                    (warnings if l in dub_langs else errors).append(
+                        f"{where} {l} text is identical to {source_lang} (untranslated, or quoted verbatim)")
                 if l in SCRIPTS and re.search(r"[0-9%&/=+]", display(ln[l])):
                     warnings.append(f"{where} {l}: digits/symbols ({display(ln[l])!r}) - spell them out as spoken")
             if source_lang in ln:

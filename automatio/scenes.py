@@ -119,7 +119,7 @@ def check(prod, narr: Narration) -> dict:
     found, perr = discover(prod.scenes_dir)
     errors += perr
     scenes: dict[str, SceneRef] = {}
-    langs = list(dict.fromkeys([prod.source_language, *prod.langs]))
+    langs = prod.marker_langs          # dub versions are not rendered, so need no markers
     for sec in narr.sections:
         k = sec["key"]
         refs = found.get(k, [])

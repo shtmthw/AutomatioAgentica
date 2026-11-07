@@ -8,6 +8,7 @@ manifest (machine-readable) and a report (human-readable).
       thumbnail.png/.jpg       (when the production has scenes/thumbnail.py)
       <label>/                 e.g. hindi/, english/
         final-video.mp4        H.264 + AAC, no subtitles in the picture or the container
+        voiceover.mp3          dub versions only: the voice alone, same duration as the video
         subtitles-en.srt / .vtt
         narration/             lines/<key>.mp3, narration.json (text + timings), voice-track.flac
         assets/                scenes/<section>.mp4, music-track.flac, timeline.json, contact-sheets/
@@ -79,6 +80,10 @@ def deliver_version(prod, narr, lang: str, asm: dict, sub_files: dict, man: dict
     atomic_write_json(nar / "narration.json", {"lang": lang, "voice": man["voice"], "lines": lines_out})
     link_or_copy(resolve(asm["voice_stem"]), nar / "voice-track.flac")
     files["voice_track"] = nar / "voice-track.flac"
+    if asm.get("voiceover_mp3"):                     # dub versions: voice only, same duration as the video
+        vo = out / "voiceover.mp3"
+        link_or_copy(resolve(asm["voiceover_mp3"]), vo)
+        files["voiceover_mp3"] = vo
 
     assets = out / "assets"
     _reset_dir(assets / "scenes")

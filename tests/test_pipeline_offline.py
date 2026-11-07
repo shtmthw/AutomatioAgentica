@@ -152,6 +152,31 @@ class OfflinePipeline(unittest.TestCase):
         st = self.aa("status", "offline-test", expect=0)
         self.assertEqual(st["next"]["action"], "done")
 
+        # 6. the Hindi version as a dub: voiced over the English picture and timeline
+        toml = (prod / "production.toml").read_text(encoding="utf-8")
+        toml = toml.replace('[versions.hi]\nvoice = "test-tone-hi"', '[versions.hi]\nvoice = "test-tone-hi"\nmode = "dub"\nfollow = "en"')
+        self.assertIn('mode = "dub"', toml)
+        (prod / "production.toml").write_text(toml, encoding="utf-8")
+        o = self.aa("run", "offline-test", expect=11)              # a changed configuration needs approval
+        self.assertIn("dub over en", json.dumps(o["approval"]["config"]))
+        self.aa("approve", "offline-test", "--by", "unit test", expect=0)
+        o = self.aa("run", "offline-test", expect=0)
+        self.assertEqual(o["state"], "done", json.dumps(o, indent=1)[:3000])
+        man = json.loads((out / "manifest.json").read_text())
+        en, hi = out / "english", out / "hindi"
+        for f in ("final-video.mp4", "voiceover.mp3", "subtitles-en.srt", "narration/voice-track.flac"):
+            self.assertTrue((hi / f).exists(), f"hindi/{f} missing")
+        self.assertEqual((hi / "subtitles-en.srt").read_text(), (en / "subtitles-en.srt").read_text())
+
+        def dur(p):
+            return float(json.loads(subprocess.run(["ffprobe", "-v", "error", "-print_format", "json", "-show_format",
+                                                    str(p)], capture_output=True, text=True).stdout)["format"]["duration"])
+        self.assertAlmostEqual(dur(hi / "final-video.mp4"), dur(en / "final-video.mp4"), delta=0.1)
+        self.assertAlmostEqual(dur(hi / "voiceover.mp3"), dur(en / "final-video.mp4"), delta=0.1)
+        ver = man["versions"]["hi"]["verification"]
+        self.assertNotEqual(ver["status"], "fail", json.dumps(ver, indent=1))
+        self.assertIn("dub fit", [c["check"] for c in ver["checks"]])
+
 
 if __name__ == "__main__":
     unittest.main()

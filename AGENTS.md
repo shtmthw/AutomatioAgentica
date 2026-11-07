@@ -116,10 +116,40 @@ any layout problem in the scenes, then run
 **narration**: the narration drifted from the supplied script. Restore the missing text,
 or list genuine non-narration paragraphs under `excluded` with a reason.
 
+## Dub versions (one video, a second voice on the same timeline)
+
+When the user wants one video whose second-language voice can replace the first without
+editing (same picture, same subtitles), make that language a **dub**:
+
+```toml
+[versions.hi]
+voice = "hindi-adam"
+mode = "dub"          # not rendered: voiced over the master's picture and timeline
+follow = "en"         # the master (a full version)
+[dub]                 # optional; defaults shown in automatio/config.py (DubSettings)
+max_speedup = 1.05
+anchors = ["s06_03", ...]   # lines that must start with their master line (e.g. numbered steps)
+```
+
+- The master's timing is final. Each dub line starts speaking when its master line does (or right
+  after the previous dub line). Every section, and every segment that starts at an anchor, must end
+  before the next one starts. Only where a segment would overflow are its lines time-stretched
+  (rubberband, pitch preserved), by at most `max_speedup`. Anything that still doesn't fit fails
+  the `dub fit` check and names the lines to **rewrite shorter** (never cut content).
+- Write the dub translation **to fit**. The house Hindi voice speaks about 1.3x as long as the
+  English voice on the same content, so the Hindi has to be concise but complete. Each `।`/`.`
+  costs about 0.55 s and each comma about 0.38 s, so drop needless commas. Dub lines need no cue
+  markers. Sentence parity and verbatim on-screen English quotes are warnings only, because a dub
+  shares the master's subtitles.
+- Outputs: `<label>/final-video.mp4` (master picture by stream copy, dub mix), `<label>/voiceover.mp3`
+  (voice only, same duration, 48 kHz 192 kbps), and the master's subtitle files.
+- Editing dub text never invalidates the master's renders or its visual review.
+
 ## Production rules (do not break)
 
 - Two complete versions per production (Hindi + English), the same scenes and visuals,
-  each timed to its own narration. Do not shorten the video or the script to save time or
+  each timed to its own narration, unless the user asks for one video with a dub (see
+  [Dub versions](#dub-versions-one-video-a-second-voice-on-the-same-timeline)). Do not shorten the video or the script to save time or
   credits.
 - **The voices are fixed and identical across all videos:** Hindi **ElevenLabs `eleven_v4`,
   voice Adam `pNInz6obpgDQGcFmaJgB`** (profile `hindi-adam`: stability 0.5, similarity 0.75,

@@ -45,6 +45,8 @@ will render or encode), then act on `state`:
   - *translate*: edit `narration.json`. Natural conversational Hindi, English technical
     terms in Latin script, same sentence count as the English, every `{marker}` copied,
     numbers spelled out. Never summarise. Run `task.check` until it shows 0 errors.
+    For a **dub** language (`mode = "dub"`), write each line to fit its master slot (concise, never
+    cut; see "Dub versions" in AGENTS.md). After voicing, the `dub fit` check names any lines to shorten.
   - *scenes*: read `docs/SCENE_AUTHORING.md` and 2-3 reference scenes in
     `productions/agentic-ai-intro/scenes/`. Write one scene per section, add markers to
     every language, `check scenes`, then `preview <slug> <section> --lang all` and **Read

@@ -244,5 +244,96 @@ class TestVoice(unittest.TestCase):
             self.assertEqual(Paid.calls, 1)                 # the canary failed; no batch was started
 
 
+
+class TestDubFit(unittest.TestCase):
+    """Dub lines are fitted onto the master timeline (automatio/dub.py)."""
+
+    def master(self):
+        def ln(key, sec, ss, se):
+            return {"key": key, "section": sec, "start": ss - 0.1, "speech_start": ss, "speech_end": se}
+        return {"total": 16.0, "scenes": [{"section": "s01", "offset": 0.0, "duration": 10.0},
+                                          {"section": "s02", "offset": 10.0, "duration": 6.0}],
+                "lines": [ln("s01_01", "s01", 0.5, 3.0), ln("s01_02", "s01", 3.5, 6.0), ln("s01_03", "s01", 6.5, 9.0),
+                          ln("s02_01", "s02", 10.5, 13.0)]}
+
+    def dub(self, d1, d2, d3, d4):
+        return {k: {"speech_start": 0.05, "speech_end": 0.05 + d} for k, d in
+                (("s01_01", d1), ("s01_02", d2), ("s01_03", d3), ("s02_01", d4))}
+
+    def settings(self, **kw):
+        from automatio.config import DubSettings
+        kw.setdefault("min_gap", 0.12)
+        return DubSettings(**kw)
+
+    def test_lag_alone_never_speeds_up(self):
+        from automatio.dub import fit
+        # long first line: the next lines lag, but the section still fits -> no time-stretch at all
+        r = fit(self.master(), self.dub(4.0, 2.0, 2.0, 2.0), self.settings(max_lag=0.2))
+        self.assertEqual(r["summary"]["sped_up"], 0)
+        self.assertTrue(r["summary"]["lag_over"])
+
+    def test_clip_issues_finds_cut_off_endings(self):
+        import numpy as np
+        import soundfile as sf
+        from automatio.dub import audio_extent, clip_issues
+        sr = 48000
+        t = np.arange(int(1.0 * sr)) / sr
+        tone = (0.4 * np.sin(2 * np.pi * 220 * t)).astype(np.float32)
+        with tempfile.TemporaryDirectory() as d:
+            cut = Path(d) / "cut.wav"
+            sf.write(cut, np.concatenate([np.zeros(int(0.2 * sr), np.float32), tone]), sr)   # stops mid-sound
+            ok = Path(d) / "ok.wav"
+            env = np.concatenate([np.ones(len(tone) - int(0.15 * sr)), np.linspace(1, 0, int(0.15 * sr))])
+            sf.write(ok, np.concatenate([np.zeros(int(0.2 * sr), np.float32), (tone * env).astype(np.float32),
+                                         np.zeros(int(0.3 * sr), np.float32)]), sr)
+            self.assertTrue(any("cut off" in i for i in clip_issues(cut)))
+            self.assertEqual(clip_issues(ok), [])
+            from automatio.audio import decode
+            a0, a1 = audio_extent(decode(ok))
+            self.assertAlmostEqual(a0, 0.2, delta=0.02)
+            self.assertAlmostEqual(a1, 1.2, delta=0.06)
+
+    def test_fits_without_speedup_and_starts_on_time(self):
+        from automatio.dub import fit
+        r = fit(self.master(), self.dub(3.2, 2.5, 2.4, 3.0), self.settings())
+        p = {x["key"]: x for x in r["placements"]}
+        self.assertEqual(r["summary"]["overflow"], [])
+        self.assertEqual(r["summary"]["sped_up"], 0)
+        self.assertAlmostEqual(p["s01_01"]["onset"], 0.5)          # speech onset on the master onset
+        self.assertAlmostEqual(p["s02_01"]["onset"], 10.5)         # the next section starts on time
+        self.assertAlmostEqual(p["s01_02"]["onset"], 3.82)         # previous line + min_gap: a small lag
+        self.assertAlmostEqual(p["s01_02"]["lag"], 0.32)
+        self.assertAlmostEqual(p["s01_03"]["onset"], 6.5)          # caught up: back on the master onset
+        self.assertAlmostEqual(p["s01_01"]["t"], 0.45)             # the clip starts its lead earlier
+
+    def test_speeds_up_only_what_overflows(self):
+        from automatio.dub import fit
+        # section s01 holds 8.38 s of speech in a 9.2 s window ending at 9.7; at 1x it would end at ~9.86
+        r = fit(self.master(), self.dub(3.0, 2.9, 3.1, 2.0), self.settings())
+        sm = r["summary"]
+        self.assertEqual(sm["overflow"], [])
+        self.assertGreater(sm["max_speed"], 1.0)
+        self.assertLessEqual(sm["max_speed"], 1.05)
+        speeds = {x["key"]: x["speed"] for x in r["placements"]}
+        self.assertEqual(speeds["s02_01"], 1.0)                    # the other section is untouched
+        self.assertLessEqual(r["placements"][2]["end"], 9.7 + 1e-6)
+
+    def test_reports_what_cannot_fit(self):
+        from automatio.dub import fit
+        r = fit(self.master(), self.dub(3.5, 3.5, 3.5, 2.0), self.settings())
+        self.assertEqual(len(r["summary"]["overflow"]), 1)
+        self.assertEqual(r["summary"]["overflow"][0]["lines"], ["s01_01", "s01_02", "s01_03"])
+        self.assertAlmostEqual({x["key"]: x for x in r["placements"]}["s02_01"]["onset"], 10.5)  # not pushed on
+
+    def test_anchor_splits_segments(self):
+        from automatio.dub import fit, segments
+        st = self.settings(anchors=["s01_03"])
+        segs = segments(self.master(), st)
+        self.assertEqual([[ln["key"] for ln in s["lines"]] for s in segs], [["s01_01", "s01_02"], ["s01_03"], ["s02_01"]])
+        self.assertAlmostEqual(segs[0]["end"], 6.5 - st.min_gap)
+        r = fit(self.master(), self.dub(2.6, 2.5, 2.4, 2.0), st)
+        self.assertAlmostEqual({x["key"]: x for x in r["placements"]}["s01_03"]["onset"], 6.5)  # anchored line on time
+
+
 if __name__ == "__main__":
     unittest.main()

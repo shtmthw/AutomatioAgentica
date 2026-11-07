@@ -70,6 +70,23 @@ class Version:
     voice: str
     label: str
     audio_language: str
+    mode: str = "full"          # "full": own render timed to its narration; "dub": voiced over `follow`'s picture
+    follow: str | None = None   # dub only: the master version whose picture, timeline and subtitles it reuses
+
+
+@dataclass
+class DubSettings:
+    """How a dub version's lines are fitted onto the master timeline (see automatio/dub.py)."""
+    max_speedup: float = 1.05   # time-stretch ceiling, used only where a segment would otherwise overflow
+    max_lag: float = 1.0        # a line may start at most this much after the master line (warning above)
+    max_spill: float = 1.0      # ... and run at most this far into the next master line (warning above)
+    min_gap: float = 0.25       # real silence kept between two dub lines (measured on the audio)
+    section_tail: float = 0.3   # a section's last line must end this long before the section ends
+    anchors: list = field(default_factory=list)   # line keys that must start with their master line (steps)
+    level_match: bool = True    # level every line to the same loudness before mixing (±6 dB at most)
+    voice_chain: str = "highpass=f=70,deesser=i=0.35,acompressor=threshold=-21dB:ratio=2:attack=8:release=160"
+    retakes: int = 2            # re-voice a paid clip whose ending is cut off, at most this often
+    mp3_bitrate: str = "256k"
 
 
 @dataclass
@@ -144,6 +161,7 @@ class Production:
     budget: dict
     raw: dict
     voices: dict = field(default_factory=dict)
+    dub: DubSettings = field(default_factory=DubSettings)
 
     @property
     def build_dir(self) -> Path:
@@ -156,6 +174,21 @@ class Production:
     @property
     def langs(self) -> list[str]:
         return list(self.versions)
+
+    @property
+    def full_langs(self) -> list[str]:
+        """Versions rendered from the scenes (timed to their own narration)."""
+        return [l for l, v in self.versions.items() if v.mode == "full"]
+
+    @property
+    def dub_langs(self) -> list[str]:
+        """Versions voiced over a master version's picture and timeline."""
+        return [l for l, v in self.versions.items() if v.mode == "dub"]
+
+    @property
+    def marker_langs(self) -> list[str]:
+        """Languages whose narration must carry the cue markers (the ones scenes are timed to)."""
+        return list(dict.fromkeys([self.source_language, *self.full_langs]))
 
     def profile(self, lang: str, draft: bool = False) -> VoiceProfile:
         v = self.versions[lang]
@@ -173,10 +206,13 @@ class Production:
 
     def config_fingerprint_inputs(self) -> dict:
         """What an approval covers: languages, voices (exact provider settings), budget."""
-        return {"versions": {l: v.__dict__ for l, v in self.versions.items()},
+        def ver(v):   # dub fields only when used, so existing approvals of full versions stay valid
+            return {k: x for k, x in v.__dict__.items() if not (k in ("mode", "follow") and v.mode == "full")}
+        return {"versions": {l: ver(v) for l, v in self.versions.items()},
                 "voices": {l: self.profile(l).public() for l in self.langs},
                 "subtitles": {"language": self.subtitles.language, "formats": self.subtitles.formats},
-                "video": self.video.__dict__, "budget": self.budget}
+                "video": self.video.__dict__, "budget": self.budget,
+                **({"dub": self.dub.__dict__} if self.dub_langs else {})}
 
 
 def _section(cls, data: dict, name: str):
@@ -227,10 +263,20 @@ def load_production(arg: str | None = None) -> Production:
         if voices[v["voice"]].language != lang:
             raise ConfigError(f"{path}: [versions.{lang}] uses voice {v['voice']!r}, which speaks "
                               f"{voices[v['voice']].language!r}")
+        mode = v.get("mode", "full")
+        if mode not in ("full", "dub"):
+            raise ConfigError(f"{path}: [versions.{lang}] mode must be 'full' or 'dub'")
         versions[lang] = Version(lang=lang, voice=v["voice"], label=v.get("label", LABELS.get(lang, lang)),
-                                 audio_language=v.get("audio_language", ISO639_2.get(lang, "und")))
+                                 audio_language=v.get("audio_language", ISO639_2.get(lang, "und")),
+                                 mode=mode, follow=v.get("follow"))
     if not versions:
         raise ConfigError(f"{path}: at least one [versions.<lang>] section is required")
+    for lang, ver in versions.items():
+        if ver.mode == "dub":
+            m = versions.get(ver.follow or "")
+            if m is None or m.mode != "full":
+                raise ConfigError(f"{path}: [versions.{lang}] is a dub; `follow` must name a full version "
+                                  f"(got {ver.follow!r})", remedy='e.g. follow = "en"')
 
     subs = _section(SubtitleSettings, raw.get("subtitles", {}), "subtitles")
     bad = set(subs.formats) - {"srt", "vtt"}
@@ -253,7 +299,8 @@ def load_production(arg: str | None = None) -> Production:
         review=_section(ReviewSettings, raw.get("review", {}), "review"),
         render=_section(RenderSettings, raw.get("render", {}), "render"),
         pronunciation=raw.get("pronunciation", {}),
-        budget=raw.get("budget", {}), raw=raw, voices=voices)
+        budget=raw.get("budget", {}), raw=raw, voices=voices,
+        dub=_section(DubSettings, raw.get("dub", {}), "dub"))
     if prod.video.encoder not in ("libx264", "copy"):
         raise ConfigError(f"{path}: [video] encoder must be 'libx264' or 'copy'")
     for lang in prod.langs:

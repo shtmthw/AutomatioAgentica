@@ -261,7 +261,8 @@ def cmd_check(a):
     p = _pipeline(a)
     prod = p.prod
     if a.what in ("translate", "narration"):
-        rep = N.validate(p.narr, langs=prod.langs, subtitle_lang=prod.subtitles.language, source_lang=prod.source_language)
+        rep = N.validate(p.narr, langs=prod.langs, subtitle_lang=prod.subtitles.language, source_lang=prod.source_language,
+                         marker_langs=prod.marker_langs, dub_langs=prod.dub_langs)
         if a.what == "narration":
             comp = N.completeness(prod, p.narr)
             rep["completeness"] = comp
@@ -303,7 +304,7 @@ def cmd_preview(a):
     chk = check_scenes(prod, narr)
     if sec["key"] not in chk["scenes"]:
         raise ValidationFailed(f"no valid scene for {sec['key']}: " + "; ".join(e for e in chk["errors"] if sec["key"] in e))
-    langs = prod.langs if a.lang in (None, "all") else [a.lang]
+    langs = prod.full_langs if a.lang in (None, "all") else [a.lang]   # dub versions are not rendered
     kind = "final" if a.hq else "draft"
     out = []
     for lang in langs:
