@@ -21,7 +21,9 @@ The video's timing is final; the dub is fitted to it, never the other way round:
   * only where a segment would otherwise overflow, its lines are time-stretched (rubberband with
     speech settings, pitch and formants preserved) by the smallest factor that fits, at most
     `max_speedup` - never to reduce lag;
-  * what still does not fit is reported (the text has to be rewritten shorter), never cut.
+  * what still does not fit is reported (the text has to be rewritten shorter), never cut;
+  * before paying for a dub, the voice stage forecasts the fit from the text (automatio/forecast.py)
+    and stops with a `dub-fit` agent task if a segment clearly cannot fit.
 
 Audio treatment (the voice-over is a deliverable of its own):
 
@@ -33,13 +35,17 @@ Audio treatment (the voice-over is a deliverable of its own):
   * clips whose ending is cut off by the provider are found by `clip_issues`; the voice stage
     re-takes them (`retakes`), and verification fails while any remain.
 
-The dub shares the master's subtitle files (same picture, same lines in the same slots).
+The dub shares the master's subtitle files (same picture, same lines in the same slots); with
+[subtitles] own_language it also gets subtitles in its own language, timed to the dub voice as
+placed (timeline lines carry `clip_t0` and `speed` for that).
 Outputs: <work>/final.mp4 (master picture, untouched + dub mix) and voiceover.mp3 (voice only,
-same duration as the video, 48 kHz, `mp3_bitrate`).
+same duration as the video, 48 kHz, `mp3_bitrate`). `preview` builds the same for a few sections
+(cached paid clips, the free draft voice for the rest) so a dub can be heard before it is paid for.
 """
 from __future__ import annotations
 
 import hashlib
+import shutil
 from pathlib import Path
 
 import numpy as np
@@ -96,7 +102,7 @@ def clip_issues(path: Path, words: list | None = None) -> list[str]:
 
 def prepare_clip(src: Path, speed: float, work: Path) -> dict:
     """Trimmed, faded (and if needed time-stretched) mono clip; cached by content."""
-    h = hashlib.sha1(f"prep-2|{src.name}|{src.stat().st_size}|{speed:.3f}".encode()).hexdigest()[:16]
+    h = hashlib.sha1(f"prep-3|{src.name}|{src.stat().st_size}|{speed:.3f}".encode()).hexdigest()[:16]
     out = work / "clips" / f"{h}.wav"
     meta = out.with_suffix(".json")
     if out.exists() and meta.exists():
@@ -123,7 +129,7 @@ def prepare_clip(src: Path, speed: float, work: Path) -> dict:
         loud = lufs(out)
     except Exception:
         loud = None
-    info = {"lead": b0, "end": b1, "duration": len(y) / SR, "lufs": loud, "speed": speed}
+    info = {"lead": b0, "end": b1, "duration": len(y) / SR, "lufs": loud, "speed": speed, "trim_start": s0}
     atomic_write_json(meta, info)
     return {"path": out, **info}
 
@@ -220,11 +226,64 @@ def _voice_chain(voice: np.ndarray, chain: str, work: Path) -> np.ndarray:
     return out
 
 
+def voice_track(prod, mtl: dict, files: dict, work: Path, progress=None) -> dict:
+    """Fit the clips `files` (line key -> clip path) onto the master timeline `mtl`, place them,
+    polish and mix them. Used by the dub assembly (whole timeline) and the dub preview (a few
+    sections). Returns the fit result, the mix stems and the dub's own timeline lines.
+
+    Each line records `clip_t0` and `speed`: a moment τ of the original clip (e.g. a word time
+    from the voice manifest) is heard at clip_t0 + τ / speed on the timeline."""
+    st = prod.dub
+    total = mtl["total"]
+    keys = [ln["key"] for ln in mtl["lines"]]
+    step = progress or (lambda i, what: None)
+    step(1, "prepare clips")
+    base = {k: prepare_clip(files[k], 1.0, work) for k in keys}
+    dub_lines = {k: {"speech_start": c["lead"], "speech_end": c["end"]} for k, c in base.items()}
+    step(2, "fit")
+    res = fit(mtl, dub_lines, st)
+    loud = [c["lufs"] for c in base.values() if c.get("lufs") is not None]
+    target = float(np.median(loud)) if loud else None
+    n = int(np.ceil(total * SR)) + SR
+    voice = np.zeros(n, dtype=np.float32)
+    speech = np.zeros(n, dtype=bool)
+    lines = []
+    for p in res["placements"]:
+        c = base[p["key"]] if p["speed"] <= 1.0 else prepare_clip(files[p["key"]], p["speed"], work)
+        y, _ = sf.read(c["path"], dtype="float32")
+        if st.level_match and target is not None and c.get("lufs") is not None:
+            y = y * 10 ** (float(np.clip(target - c["lufs"], -6, 6)) / 20)
+        t = p["onset"] - c["lead"]
+        a = int(round(t * SR))
+        b = min(n, a + len(y))
+        if b > a:
+            voice[a:b] += y[: b - a]
+        speech[int(p["onset"] * SR): int(p["end"] * SR)] = True
+        lines.append({"key": p["key"], "section": p["section"], "start": round(t, 4),
+                      "speech_start": round(p["onset"], 4), "speech_end": round(p["end"], 4), "speed": p["speed"],
+                      "clip_t0": round(t - c.get("trim_start", 0.0) / p["speed"], 4),
+                      "lag": round(p["lag"], 3), "spill": round(p["spill"], 3)})
+    step(3, "polish + mix")
+    voice = _voice_chain(voice, st.voice_chain, work)
+    stems = mix(voice, speech, total, prod.audio, work)
+    return {"fit": res, "stems": stems, "lines": lines}
+
+
+def _export_mp3(stem, dst: Path, total: float, bitrate: str, title: str, language: str) -> Path:
+    """Voice-only MP3. The mono stem goes to both channels at full level ("-ac 2" would pan it
+    3 dB down: the mix levels the voice as heard in stereo, so the MP3 duplicates the channel)."""
+    part = tmp_path(dst)
+    run(["ffmpeg", "-v", "error", "-y", "-i", stem, "-af", "pan=stereo|c0=c0|c1=c0", "-ar", "48000",
+         "-c:a", "libmp3lame", "-b:a", bitrate, "-t", f"{total:.3f}", "-metadata", f"title={title} - voice-over",
+         "-metadata", f"language={language}", "-f", "mp3", part], what="ffmpeg mp3 (voice-over)")
+    part.replace(dst)
+    return dst
+
+
 def assemble(prod, narr, lang: str, master_asm: dict, man: dict, state) -> dict:
     """Dub version: fit, place, polish, mix (same music and treatment as the master), mux onto the
     master's picture (stream copy), and export the voice-only MP3."""
     ver = prod.versions[lang]
-    st = prod.dub
     work = prod.build_dir / "assemble" / lang
     work.mkdir(parents=True, exist_ok=True)
     mtl = read_json(resolve(master_asm["timeline"]))
@@ -237,34 +296,12 @@ def assemble(prod, narr, lang: str, master_asm: dict, man: dict, state) -> dict:
     if missing:
         raise StageFailed(f"{lang}: no voice clip for {missing[:5]}")
 
-    state.progress(f"assemble:{lang}", 1, 5, "prepare clips")
-    base = {k: prepare_clip(resolve(man["lines"][k]["file"]), 1.0, work) for k in want}
-    dub_lines = {k: {"speech_start": c["lead"], "speech_end": c["end"]} for k, c in base.items()}
-    state.progress(f"assemble:{lang}", 2, 5, "fit")
-    res = fit(mtl, dub_lines, st)
-    sm = res["summary"]
+    vt = voice_track(prod, mtl, {k: resolve(man["lines"][k]["file"]) for k in want}, work,
+                     progress=lambda i, what: state.progress(f"assemble:{lang}", i, 5, what))
+    sm, stems = vt["fit"]["summary"], vt["stems"]
     log.info(f"assemble {lang} (dub over {ver.follow}): {sm['lines']} lines; sped up {sm['sped_up']} "
              f"(max x{sm['max_speed']:.3f}); max lag {sm['max_lag']:.2f}s, max spill {sm['max_spill']:.2f}s; "
              f"{len(sm['overflow'])} overflowing segment(s)")
-    loud = [c["lufs"] for c in base.values() if c.get("lufs") is not None]
-    target = float(np.median(loud)) if loud else None
-    n = int(np.ceil(total * SR)) + SR
-    voice = np.zeros(n, dtype=np.float32)
-    speech = np.zeros(n, dtype=bool)
-    for p in res["placements"]:
-        c = base[p["key"]] if p["speed"] <= 1.0 else prepare_clip(resolve(man["lines"][p["key"]]["file"]), p["speed"], work)
-        y, _ = sf.read(c["path"], dtype="float32")
-        if st.level_match and target is not None and c.get("lufs") is not None:
-            y = y * 10 ** (float(np.clip(target - c["lufs"], -6, 6)) / 20)
-        t = p["onset"] - c["lead"]
-        a = int(round(t * SR))
-        b = min(n, a + len(y))
-        if b > a:
-            voice[a:b] += y[: b - a]
-        speech[int(p["onset"] * SR): int(p["end"] * SR)] = True
-    state.progress(f"assemble:{lang}", 3, 5, "polish + mix")
-    voice = _voice_chain(voice, st.voice_chain, work)
-    stems = mix(voice, speech, total, prod.audio, work)
 
     state.progress(f"assemble:{lang}", 4, 5, "encode")
     master_mp4 = resolve(master_asm["final"])
@@ -278,24 +315,14 @@ def assemble(prod, narr, lang: str, master_asm: dict, man: dict, state) -> dict:
          "-metadata:s:a:0", f"language={ver.audio_language}", part], log_file=work / "encode.log",
         what="ffmpeg mux (dub)")
     part.replace(final)
-    mp3 = work / "voiceover.mp3"
-    part = tmp_path(mp3)
-    # mono stem -> stereo at full level in both channels ("-ac 2" would pan it 3 dB down: the mix
-    # levels the voice as heard in stereo, so the MP3 must duplicate the channel, not pan it)
-    run(["ffmpeg", "-v", "error", "-y", "-i", stems["voice_stem"], "-af", "pan=stereo|c0=c0|c1=c0", "-ar", "48000",
-         "-c:a", "libmp3lame", "-b:a", st.mp3_bitrate, "-t", f"{total:.3f}", "-metadata", f"title={title} - voice-over",
-         "-metadata", f"language={ver.audio_language}", "-f", "mp3", part], what="ffmpeg mp3 (voice-over)")
-    part.replace(mp3)
+    mp3 = _export_mp3(stems["voice_stem"], work / "voiceover.mp3", total, prod.dub.mp3_bitrate, title,
+                      ver.audio_language)
     Path(stems["mix"]).unlink(missing_ok=True)
 
     issues = {k: clip_issues(resolve(man["lines"][k]["file"]), man["lines"][k].get("words")) for k in want}
-    issues = {k: v for k, v in issues.items() if v}
-    lines = [{"key": p["key"], "section": p["section"], "start": round(p["onset"] - (base[p["key"]]["lead"] / p["speed"]), 4),
-              "speech_start": round(p["onset"], 4), "speech_end": round(p["end"], 4), "speed": p["speed"],
-              "lag": round(p["lag"], 3), "spill": round(p["spill"], 3)} for p in res["placements"]]
-    sm["clip_issues"] = issues
+    sm["clip_issues"] = {k: v for k, v in issues.items() if v}
     tl = {"lang": lang, "mode": "dub", "follow": ver.follow, "total": total, "scenes": mtl["scenes"],
-          "lines": lines, "fit": sm}
+          "lines": vt["lines"], "fit": sm}
     atomic_write_json(work / "timeline.json", tl)
     state.progress(f"assemble:{lang}", 5, 5, "done")
     return {"lang": lang, "final": rel(final), "total": total, "timeline": rel(work / "timeline.json"),
@@ -303,6 +330,77 @@ def assemble(prod, narr, lang: str, master_asm: dict, man: dict, state) -> dict:
             "music_stem": rel(stems["music_stem"]) if stems["music_stem"] else None, "fit": sm,
             "encode": {"video": f"stream copy of {ver.follow} ({rel(master_mp4)})", "audio": f"aac {v.audio_bitrate}",
                        "subtitle_filter": None, "subtitle_streams": 0}}
+
+
+# ------------------------------------------------------------------ preview
+def section_span(narr, sections: list[str]) -> list[str]:
+    """The contiguous run of section keys from the first to the last one named."""
+    order = [s["key"] for s in narr.sections]
+    bad = [s for s in sections if s not in order]
+    if bad or not sections:
+        raise StageFailed(f"unknown section(s) {bad or sections}; sections: {order}")
+    idx = sorted(order.index(s) for s in sections)
+    return order[idx[0]: idx[-1] + 1]
+
+
+def preview(prod, narr, lang: str, sections: list[str], state, *, paid: bool = False) -> dict:
+    """Hear a dub before paying for all of it: the dub of a few sections over the master's final
+    picture. Lines whose paid clip is cached use it. The others use the free draft voice, or with
+    `paid=True` the paid voice (capped by the approved budget, cached for the real run)."""
+    from . import voice as V
+    ver = prod.versions[lang]
+    if ver.mode != "dub":
+        raise StageFailed(f"{lang} is not a dub version")
+    master = state.stage(f"assemble:{ver.follow}")
+    if master.get("status") != "done" or not resolve(master.get("final", "missing")).exists():
+        raise StageFailed(f"the {ver.follow} master is not assembled yet",
+                          remedy=f"python -m automatio run {prod.slug} --lang {ver.follow}")
+    span = section_span(narr, sections)
+    mtl = read_json(resolve(master["timeline"]))
+    scenes = [s for s in mtl["scenes"] if s["section"] in span]
+    t0, t1 = scenes[0]["offset"], scenes[-1]["offset"] + scenes[-1]["duration"]
+
+    def shift(d, keys=("start", "speech_start", "speech_end", "offset")):
+        return {k: (round(v - t0, 4) if k in keys else v) for k, v in d.items()}
+    sub = {"total": round(t1 - t0, 4), "scenes": [shift(s) for s in scenes],
+           "lines": [shift(ln) for ln in mtl["lines"] if ln["section"] in span]}
+
+    prof = prod.profile(lang)
+    jobs = [j for j in V.plan(prod, narr, lang, prof) if j.section in span]
+    if paid and any(not j.cached for j in jobs):
+        V.generate(prod, lang, prof, [j for j in jobs if not j.cached], state, approval=state.approval)
+    files = {j.key: j.path for j in jobs if j.cached}
+    stand_in = []
+    if len(files) < len(jobs):
+        draft = prod.profile(lang, draft=True)
+        if draft.name == prof.name:
+            raise StageFailed(f"{len(jobs) - len(files)} line(s) are not voiced and {prof.name} has no free draft "
+                              "voice", remedy="Pass --paid to voice them (within the approved budget).")
+        djobs = [j for j in V.plan(prod, narr, lang, draft) if j.section in span and j.key not in files]
+        V.generate(prod, lang, draft, djobs, state, approval=None)
+        files.update({j.key: j.path for j in djobs})
+        stand_in = [j.key for j in djobs]
+
+    name = span[0] if len(span) == 1 else f"{span[0]}-{span[-1]}"
+    work = prod.build_dir / "preview" / lang / name
+    shutil.rmtree(work, ignore_errors=True)
+    work.mkdir(parents=True)
+    vt = voice_track(prod, sub, files, work)
+    stems = vt["stems"]
+    mp4 = work.parent / f"{name}.mp4"
+    part = tmp_path(mp4)
+    run(["ffmpeg", "-v", "error", "-y", "-ss", f"{t0:.3f}", "-i", resolve(master["final"]), "-i", stems["mix"],
+         "-map", "0:v:0", "-map", "1:a:0", "-t", f"{sub['total']:.3f}", "-c:v", "libx264", "-preset", "veryfast",
+         "-crf", "23", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k", "-ar", "48000", "-ac", "2",
+         "-movflags", "+faststart", part], log_file=work / "encode.log", what="ffmpeg preview encode")
+    part.replace(mp4)
+    mp3 = _export_mp3(stems["voice_stem"], work.parent / f"{name}_voice.mp3", sub["total"], prod.dub.mp3_bitrate,
+                      f"{prod.title} ({ver.label.capitalize()}) preview {name}", ver.audio_language)
+    Path(stems["mix"]).unlink(missing_ok=True)
+    sm = vt["fit"]["summary"]
+    return {"lang": lang, "sections": span, "video": rel(mp4), "voice": rel(mp3),
+            "from": round(t0, 2), "to": round(t1, 2), "lines": len(jobs),
+            "paid_voice": len(jobs) - len(stand_in), "draft_voice": stand_in, "fit": sm}
 
 
 # ------------------------------------------------------------------ checks

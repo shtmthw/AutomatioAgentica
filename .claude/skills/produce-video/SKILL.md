@@ -1,6 +1,6 @@
 ---
 name: produce-video
-description: Produce or continue an AutomatioAgentica video production. A script and a production plan become two complete long-form videos (Hindi and English) using the exact house voices, with separate English SRT/VTT subtitles for both and nothing burned in. Use when the user supplies a script/plan, asks to make, render or continue a video, asks for production status, or wants the deliverables.
+description: Produce or continue an AutomatioAgentica video production. A script and a production plan become complete long-form videos in Hindi and English (two full versions, or one master video plus a dub voiced on the same timeline) using the exact house voices, with separate English SRT/VTT subtitles and nothing burned in. Use when the user supplies a script/plan, asks to make, render, dub or continue a video, asks for production status, or wants the deliverables.
 ---
 
 # Produce a video with AutomatioAgentica
@@ -25,6 +25,9 @@ Report any ✗ item with its remedy and stop if a critical one fails.
 - New: the user names a script file and a production plan (Markdown or text; convert
   .docx/.pdf to .md yourself, keeping every word). Pick a short slug and run:
   `.venv/bin/python -m automatio new <slug> --script <path> --plan <path> [--notes <path>] --title "<title>"`
+  If the plan asks for one video plus a voice-over in the other language on the same
+  timeline (like Episode 02), add `--dub hi` (Hindi dubbed over the English master).
+  Plan-required file names go under `[deliver.aliases]` in `production.toml`.
   Voices are **fixed for every video**: `hindi-adam` (Hindi) and `english-andrew` (English),
   which are the defaults. Never pass `--voice`, never pick, add or swap a voice, and never edit
   the voice profiles in `voices.toml`. If something seems to call for another voice, ask the user.
@@ -37,8 +40,8 @@ Run `.venv/bin/python -m automatio run <slug> --json` (in the background when st
 will render or encode), then act on `state`:
 
 - **needs_approval**: summarise `approval.config` (languages, voices with provider IDs,
-  subtitles, video) and `approval.estimate` (paid credits; *exact* once the translation
-  exists). Ask the user with AskUserQuestion, recommending the suggested budget. On an
+  subtitles, video), `approval.estimate` (paid credits; *exact* once the translation
+  exists) and, for a dub, `approval.dub_forecast` (segments at risk of not fitting). Ask the user with AskUserQuestion, recommending the suggested budget. On an
   explicit yes, run `approval.command` with `--by "<user's name or 'user'>"`. If the user
   declines or changes settings, edit `production.toml` accordingly, not the state.
 - **needs_agent**: read `task.file` and do the task.
@@ -46,7 +49,10 @@ will render or encode), then act on `state`:
     terms in Latin script, same sentence count as the English, every `{marker}` copied,
     numbers spelled out. Never summarise. Run `task.check` until it shows 0 errors.
     For a **dub** language (`mode = "dub"`), write each line to fit its master slot (concise, never
-    cut; see "Dub versions" in AGENTS.md). After voicing, the `dub fit` check names any lines to shorten.
+    cut; see "Dub versions" in AGENTS.md). Run `check dub` after editing: it forecasts the fit
+    before any credits are spent. To let the user hear a dub early, run
+    `preview <slug> s01,s02 --lang hi` (cached paid clips + free draft voice).
+  - *dub-fit-<lang>*: shorten the named dub lines (meaning kept), `check dub` until no errors.
   - *scenes*: read `docs/SCENE_AUTHORING.md` and 2-3 reference scenes in
     `productions/agentic-ai-intro/scenes/`. Write one scene per section, add markers to
     every language, `check scenes`, then `preview <slug> <section> --lang all` and **Read
@@ -54,8 +60,11 @@ will render or encode), then act on `state`:
   - *review*: Read **every** contact sheet image listed. Fix real problems (re-`preview`),
     then `complete review <slug> --notes "<what you checked/fixed>"`.
   - *narration*: restore missing script text, or list true non-narration under `excluded`.
+  - Topics: put a short English `"topic"` on the line where each key topic starts (any time;
+    it never invalidates renders or the review). The pipeline writes `topics.txt` from them.
 - **blocked**: tell the user `error.message` and `error.remedy` verbatim (missing key,
-  missing permission, out of credits, missing tool). Don't work around it.
+  missing permission, out of credits, missing tool). Don't work around it. If `error.hint`
+  offers `run <slug> --lang <others>`, the other versions can still be delivered: offer that.
 - **failed**: read `error.details.tail` and the log it names. Fix what is yours (scene
   code, narration) and run again. Otherwise report it.
 - **done**: go to 3.
@@ -69,8 +78,10 @@ Read `output/<slug>/report.md` and `output/<slug>/manifest.json`, then tell the 
 
 - the two videos (`output/<slug>/hindi/final-video.mp4`, `.../english/final-video.mp4`)
   with their durations, and the four subtitle files;
-- the chapter and topic timestamps **per version**: write `output/<slug>/<label>/chapters.txt`
-  and `topics.txt` from `narration-script.md`, as in guidelines 4 and 6 of AGENTS.md;
+- the chapter and topic timestamps **per version**: the pipeline writes
+  `output/<slug>/<label>/chapters.txt` and `topics.txt` (guidelines 4 and 6 of AGENTS.md) and
+  repeats them in `report.md`. If the report warns that there are no topics, add `topic` fields
+  and run again;
 - the verification table per version, with every warn/fail honestly;
 - credits spent, the voices used (provider + voice ID), and anything listed under "Not
   verified automatically". Listening quality needs the user's ears.

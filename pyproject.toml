@@ -1,6 +1,6 @@
 [project]
 name = "automatio-agentica"
-version = "2.0.0"
+version = "2.1.0"
 description = "Harness-driven video production pipeline: script + plan -> Hindi and English long-form videos (Manim animation, house voices, separate subtitles)"
 requires-python = ">=3.12,<3.13"
 dependencies = [

@@ -7,7 +7,7 @@ every language, grouped into sections (one section = one scene):
     {"schema": "automatio.narration/1", "title": "...", "source_language": "en",
      "sections": [{"key": "s01", "chapter": {"number": "01", "title": "Introduction"},
                    "plan_section": "01",
-                   "lines": [{"key": "s01_01",
+                   "lines": [{"key": "s01_01", "topic": "The error an agent can fix",
                               "en": "Imagine you're running a program, and suddenly an {error}error appears.",
                               "hi": "मान लीजिए, कोई प्रोग्राम चलाते समय अचानक एक {error}Error आ गया।"}]}],
      "excluded": [{"text": "...", "reason": "visual direction, not narration"}]}
@@ -17,15 +17,21 @@ should happen. They are removed before speech and subtitles; the voice stage rec
 the time of the word that follows each marker, and scenes use `v.cue("name")`. The
 same marker names must appear in every language, which is what keeps one scene file
 in sync with every language's narration.
+
+`topic` (optional, English, a few words) marks a line where a key topic starts. The
+deliver stage turns topics into each version's topics.txt with that version's own
+times. Topics are metadata: they never change what is spoken, rendered or reviewed.
 """
 from __future__ import annotations
 
 import difflib
+import hashlib
+import json
 import re
 from pathlib import Path
 
 from .errors import InputError
-from .util import atomic_write_json, read_json
+from .util import atomic_write_json, file_fp, read_json
 
 SCHEMA = "automatio.narration/1"
 MARKER = re.compile(r"\{([a-z][a-z0-9_]*)\}")
@@ -34,6 +40,8 @@ ENDERS = ".?!।"
 KEY = re.compile(r"^[a-z0-9][a-z0-9_]*$")
 DEVANAGARI = re.compile(r"[ऀ-ॿ]")
 SCRIPTS = {"hi": DEVANAGARI, "mr": DEVANAGARI, "bn": re.compile(r"[ঀ-৿]")}
+META_KEYS = ("topic",)          # line fields that are metadata only (never spoken, rendered or timed)
+TOPIC_MAX = 60
 
 
 # ------------------------------------------------------------------ text
@@ -141,8 +149,36 @@ class Narration:
             langs |= {k for k in ln if len(k) <= 3 and k != "key" and isinstance(ln[k], str)}
         return langs
 
+    def topics(self) -> list[tuple[str, str]]:
+        """(line key, topic) in narration order."""
+        return [(ln["key"], ln["topic"].strip()) for _, ln in self.lines()
+                if isinstance(ln.get("topic"), str) and ln["topic"].strip()]
+
     def save(self) -> None:
         atomic_write_json(self.path, self.data, indent=2)
+
+
+def content_fingerprint(path: Path) -> str:
+    """Fingerprint of narration.json without its metadata fields (topics).
+
+    A file without metadata keeps its plain file fingerprint. With metadata, the file is
+    fingerprinted as `Narration.save()` would write it without those fields, which is
+    byte-identical to the file before they were added. So adding or editing topics never
+    invalidates renders, drafts or a visual review that are otherwise up to date."""
+    data = read_json(path)
+    if not isinstance(data, dict):
+        return file_fp(path)
+    stripped, found = json.loads(json.dumps(data)), False
+    for s in stripped.get("sections", []):
+        for ln in s.get("lines", []):
+            for k in META_KEYS:
+                if k in ln:
+                    ln.pop(k)
+                    found = True
+    if not found:
+        return file_fp(path)
+    canon = json.dumps(stripped, ensure_ascii=False, indent=2, default=str) + "\n"
+    return hashlib.sha1(canon.encode("utf-8")).hexdigest()[:20]
 
 
 def load_narration(path: Path) -> Narration | None:
@@ -186,6 +222,14 @@ def validate(narr: Narration, *, langs: list[str], subtitle_lang: str, source_la
             if not KEY.match(lk) or lk in seen_l:
                 errors.append(f"line key {lk!r} is invalid or duplicated")
             seen_l.add(lk)
+            if "topic" in ln:
+                t = ln["topic"]
+                if not isinstance(t, str) or not t.strip() or "\n" in t:
+                    errors.append(f"{where} topic must be a short one-line string")
+                elif len(t) > TOPIC_MAX:
+                    warnings.append(f"{where} topic is {len(t)} characters; keep it under {TOPIC_MAX} (a few words)")
+                elif DEVANAGARI.search(t):
+                    warnings.append(f"{where} topic {t!r} should be English (it goes into the video description)")
             missing = [l for l in required if not (ln.get(l) or "").strip()]
             if missing:
                 errors.append(f"{where} missing text for: {', '.join(missing)}")

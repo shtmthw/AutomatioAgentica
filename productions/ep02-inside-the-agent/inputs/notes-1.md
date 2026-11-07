@@ -27,3 +27,19 @@ These directions override the plan (VIDEO-PLAN-2) where they differ.
 - **Deliverable names:** the plan's file names (`ep02_inside_the_agent_EN.mp4`,
   `ep02_EN.srt`, later `ep02_voiceover_HI.mp3`, `ep02_HI.srt`) are written inside
   `output/<slug>/`, next to the pipeline's standard layout.
+
+## Update 2026-11-08 (pipeline 2.1)
+
+- The dub-track stage exists now: `[versions.hi] mode = "dub"`, `follow = "en"` (see
+  production.toml). The English video is delivered. The Hindi dub waits for ElevenLabs
+  credits (32 of 140 lines voiced; the monthly quota was exhausted on 2026-11-07).
+- The plan's deliverable names and folders are produced by the pipeline (`[deliver]` in
+  production.toml): `ep02_inside_the_agent_EN.mp4`, `ep02_EN.srt`, `timings/en.json`,
+  `narration/en/`, `narration/hi/`, `narration/en_hi_side_by_side.md`, and once the dub is
+  voiced, `ep02_voiceover_HI.mp3` and `ep02_HI.srt` (Hindi subtitles timed to the Hindi voice,
+  `[subtitles] own_language`). Chapters and topics come from `topic` fields in narration.json.
+- Before the remaining paid lines are voiced, the dub forecast (`check dub`) found that
+  s09_05 could not fit its slot. Its Hindi was tightened without dropping content:
+  "Harness tests चलाता है। Tool result: ..." -> "Harness के चलाने पर Tool result: ...".
+  The on-screen quote stays verbatim.
+

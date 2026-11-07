@@ -2,14 +2,19 @@
 
 How to turn a section of the production plan into a Manim scene that renders
 correctly in **every language version** and matches the house style of the reference
-production (`productions/agentic-ai-intro/scenes/` - read two or three of them first).
+productions. Read two or three of their scenes first:
+`productions/agentic-ai-intro/scenes/` (Episode 01: zones, cards, terminal/editor/browser,
+the agent loop) and `productions/ep02-inside-the-agent/scenes/` (Episode 02: model, harness,
+message lists, tool calls, context window, step tracker).
 
 ## 1. How a scene is used
 
 - One `VoiceScene` subclass per section of `narration.json`, in the production's
   `scenes/` folder, with `SECTION = "<section key>"`.
-- The pipeline renders each scene **once per language** (Hindi, English, ...). The
-  scene code is the same; only the narration timings differ. Never branch on language.
+- The pipeline renders each scene **once per rendered language** (Hindi, English, ...).
+  The scene code is the same; only the narration timings differ. Never branch on language.
+  A dub language is not rendered at all: it is voiced onto the master's picture, so it
+  needs no markers.
 - Voice first, animation follows: line start times are decided by the narration,
   animations are placed inside each line with cue markers. Never hard-code a
   timeline in seconds.
@@ -153,6 +158,29 @@ folder_icon terminal_icon globe_icon database_icon api_icon user_icon target_ico
 spark_icon check_icon cross_icon warn_icon lock_icon loop_icon trash_icon fork_icon
 wrench_icon`. No image files.
 
+### Inside-the-agent components (`agentic_video/internals.py`, Episode 02)
+
+Reusable building blocks for lessons about how an agent works. All come with the prelude.
+Colours: MODEL = `BLUE`, HARNESS = `AMBER`, TOOLS = `TEAL`, errors = `RED`; role tags
+SYSTEM grey, USER white, ASSISTANT blue, TOOL green (`ROLE_COLORS`).
+
+| component | signature (main args) | notes |
+|---|---|---|
+| `ModelBox` | `(width=2.6, height=1.6, label="AI MODEL", color=BLUE)` | `.in_port` / `.out_port` (left / right edge), `.badge("call #2")`, animations `.think()`, `.reset_flash()` (the model "forgets") |
+| `HarnessFrame` | `(width=7.0, height=4.4, label="HARNESS", color=AMBER, sub=None)` | frame + gear label; `.grow_from(model_box)` grows it out of the model's outline |
+| `MessageCard` | `(role, text, width=5.0, size=19, content=None, dashed=False, wrap=None, label=None)` | role tag + text; `dashed=True` for a request; `wrap=n` wraps at n chars |
+| `MessageList` | `(top_left, gap=0.1)` | not a mobject: `.push(card)` positions a card under the last one; `.group()`, `.remove(card)` + `.layout_targets()` to close the gap |
+| `bundle_copy` | `(mobs, scale=0.4)` | shrunken copy of the conversation, to send it into the model as one bundle |
+| `ToolCard` | `(name, description, params, width=5.2)` | NAME / DESCRIPTION / PARAMETERS rows; `.rows`, `.values` |
+| `ToolCallCard` | `(tool, input_text, width=4.2)` | TOOL / INPUT rows, dashed blue border (only a request) |
+| `ContextWindow` | `(width=3.4, height=4.8, label="CONTEXT WINDOW")` | `.meter_to(frac)` animates the fill meter (teal -> amber -> red, `meter_color`); `.inner_top_left` |
+| `LoopDiagram` | `(center, radius=1.85, node_w=1.5, node_h=0.72, meanings=True, goal=True, done=False)` | the Episode 01 loop; `.focus("act")` lights one stage and dims the rest, `.all_lit()`, `.all_dim()`, `.leg(a, b)` path for a `Token`, `.trail(token)` |
+| `StepTracker` | `(n=9, color=AMBER)` | "STEP 3 OF 9" + progress dots; `.go(i)` returns the animations |
+| icons | `shield_icon stop_icon pause_icon clock_icon coins_icon` | plus `code_block()` (abstract, unreadable code bars) and `paper()` (a note) |
+
+Build `LoopDiagram` at the size you need instead of scaling it, so labels stay readable.
+Episode 02's plan forbids readable source code on screen: use `code_block()` for code.
+
 ## 6. Manim pitfalls (each one cost a re-render before)
 
 1. Never assign `self.color = ...` in a VGroup subclass (it recolours every child). Use `self.accent`.
@@ -169,7 +197,12 @@ wrench_icon`. No image files.
 12. Full-screen veil (rectangle, BG colour, 0.86 opacity) is the safe way to overlay a card.
 13. Long labels can exceed the frame: anchor right-hand lists with `shift(RIGHT * (6.7 - g.get_right()[0]))`.
 14. Agent loop diagrams: nodes on one true circle, arrows as `Arc` segments clipped at the node boxes
-    (`productions/agentic-ai-intro/scenes/s05_loop.py`).
+    (`productions/agentic-ai-intro/scenes/s05_loop.py`), now packaged as `LoopDiagram`.
+15. **Editing `agentic_video/*.py` re-renders everything.** The whole library is part of every
+    render's cache key, so one changed line invalidates the renders (and the visual reviews) of
+    every production. Put production-specific helpers in a non-scene module inside that
+    production's `scenes/` folder; that invalidates only its own renders. Change the shared
+    library only for something every later production needs, and expect to re-review the others.
 
 ## 7. Checklist
 
@@ -177,5 +210,6 @@ wrench_icon`. No image files.
 - [ ] `python -m automatio preview <slug> <section> --lang all` and **look at the contact sheets** (one frame per line at 92 %).
 - [ ] No layout warnings (outside the frame / below the safe line) in the preview output.
 - [ ] Nothing in the narration was shortened to fit an animation.
+- [ ] The narration lines where key topics start carry a short English `"topic"` (for `topics.txt`).
 - [ ] Dense or repetitive lines have extra visuals or keyword pop-ups; nothing on screen is a caption of the narration.
 - [ ] The video ends with a recap of all topics.

@@ -13,11 +13,13 @@
       "lines": [
         {
           "key": "s01_01",
+          "topic": "A program crashes with an error",
           "en": "Imagine you're running a program, and suddenly an {error}error appears.",
           "hi": "मान लीजिए, कोई प्रोग्राम चलाते समय अचानक एक {error}Error आ गया।"
         },
         {
           "key": "s01_02",
+          "topic": "An AI that explains the error",
           "en": "You {ask}ask an AI: what does this error mean?",
           "hi": "आपने एक AI से {ask}पूछा, इस Error का मतलब क्या है?"
         },
@@ -38,6 +40,7 @@
         },
         {
           "key": "s01_06",
+          "topic": "An AI agent that fixes it",
           "en": "You tell an AI agent: find the error, understand its cause, and fix it.",
           "hi": "आपने एक AI Agent से कहा, Error को ढूँढो, उसकी वजह समझो, और उसे ठीक कर दो।"
         },
@@ -53,6 +56,7 @@
         },
         {
           "key": "s01_09",
+          "topic": "Information vs action",
           "en": "The first AI gives us information. The {second}second one takes action itself to reach the goal.",
           "hi": "पहला AI हमें जानकारी देता है। और {second}दूसरा, लक्ष्य पूरा करने के लिए खुद काम करता है।"
         },
@@ -78,11 +82,13 @@
         },
         {
           "key": "s02_02",
+          "topic": "AI models learn from data",
           "en": "An AI model is a program that has {learned}learned from a {huge}huge amount of data.",
           "hi": "AI Model एक ऐसा प्रोग्राम है, जिसने {huge}बहुत बड़ी मात्रा में डेटा से {learned}सीखा है।"
         },
         {
           "key": "s02_03",
+          "topic": "Large Language Models (LLMs)",
           "en": "Models that work with language are called {large}Large Language Models, or {llm}LLMs for short.",
           "hi": "जो Models भाषा के साथ काम करते हैं, उन्हें {large}Large Language Model कहते हैं, छोटे में {llm}LLM।"
         },
@@ -93,6 +99,7 @@
         },
         {
           "key": "s02_05",
+          "topic": "Input and output",
           "en": "The way it works is very simple. You {write}give it some text, which is called the {input}input.",
           "hi": "इसके काम करने का तरीका बहुत आसान है। आप कुछ {write}लिखकर देते हैं, इसे {input}Input कहते हैं।"
         },
@@ -103,6 +110,7 @@
         },
         {
           "key": "s02_07",
+          "topic": "Context",
           "en": "Everything the model can see at once is called its {context}context.",
           "hi": "Model जो कुछ भी एक साथ सामने देख पाता है, उसे {context}Context कहते हैं, यानी संदर्भ।"
         },
@@ -113,11 +121,13 @@
         },
         {
           "key": "s02_09",
+          "topic": "GPT, Claude and Gemini",
           "en": "{gpt}GPT, {claude}Claude and {gemini}Gemini are all examples of large language models.",
           "hi": "{gpt}GPT, {claude}Claude, {gemini}Gemini, ये सभी Large Language Model के उदाहरण हैं।"
         },
         {
           "key": "s02_10",
+          "topic": "A model only produces text",
           "en": "But notice one thing. On its own, a model {only}only produces text. It doesn't {file}open files or {program}run programs by itself.",
           "hi": "लेकिन एक बात पर ध्यान दीजिए। Model खुद {only}सिर्फ़ टेक्स्ट बनाता है। यह अपने आप कोई {file}File नहीं खोलता, कोई {program}प्रोग्राम भी नहीं चलाता।"
         },
@@ -143,6 +153,7 @@
         },
         {
           "key": "s03_02",
+          "topic": "What an AI agent is",
           "en": "An AI agent is a {system}system that uses an AI {model}model to work toward a {goal}goal.",
           "hi": "AI Agent एक ऐसा {system}System है, जो एक AI {model}Model का इस्तेमाल करके, किसी {goal}लक्ष्य की ओर काम करता है।"
         },
@@ -153,36 +164,43 @@
         },
         {
           "key": "s03_04",
+          "topic": "The five parts of an agent",
           "en": "An agent has five basic parts. Let's look at them one by one.",
           "hi": "एक Agent के पाँच बुनियादी हिस्से होते हैं। चलिए, एक-एक करके देखते हैं।"
         },
         {
           "key": "s03_05",
+          "topic": "Part 1: the goal",
           "en": "First, the {goal}goal. What are we actually trying to achieve?",
           "hi": "पहला है {goal}Goal, यानी लक्ष्य। हम असल में क्या हासिल करना चाहते हैं।"
         },
         {
           "key": "s03_06",
+          "topic": "Part 2: the model",
           "en": "Second, the {model}model. This is the agent's {thinking}thinking part, which reasons and makes decisions.",
           "hi": "दूसरा है {model}Model। यही Agent का {thinking}सोचने वाला हिस्सा है, जो सोचता है और फ़ैसले लेता है।"
         },
         {
           "key": "s03_07",
+          "topic": "Part 3: tools",
           "en": "Third, {tools}tools. Through them, the agent can work with outside systems.",
           "hi": "तीसरा है {tools}Tools, यानी औज़ार। इन्हीं के ज़रिए Agent बाहरी Systems के साथ काम कर पाता है।"
         },
         {
           "key": "s03_08",
+          "topic": "Part 4: the environment",
           "en": "Fourth, the {environment}environment. The world or system the agent works inside, {like}like your computer or a project.",
           "hi": "चौथा है {environment}Environment, यानी माहौल। वह दुनिया या System, जिसके अंदर Agent काम कर रहा है, {like}जैसे आपका कंप्यूटर, या कोई प्रोजेक्ट।"
         },
         {
           "key": "s03_09",
+          "topic": "Part 5: feedback",
           "en": "And fifth, {feedback}feedback. {action}The information that comes back after an action.",
           "hi": "और पाँचवाँ है {feedback}Feedback, यानी प्रतिक्रिया। कोई {action}काम करने के बाद, जो जानकारी वापस आती है।"
         },
         {
           "key": "s03_10",
+          "topic": "A model alone is not an agent",
           "en": "Notice that the {model}model is just one part of the whole {system}system. An AI model on its own and a {complete}complete AI agent are not the same thing.",
           "hi": "ध्यान दीजिए, {model}Model यहाँ पूरे {system}System का सिर्फ़ एक हिस्सा है। सिर्फ़ एक AI Model, और एक {complete}पूरा AI Agent, एक ही चीज़ नहीं हैं।"
         }
@@ -203,6 +221,7 @@
         },
         {
           "key": "s04_02",
+          "topic": "A chatbot: question in, answer out",
           "en": "A chatbot receives a question.",
           "hi": "Chatbot को एक सवाल मिलता है।"
         },
@@ -218,6 +237,7 @@
         },
         {
           "key": "s04_05",
+          "topic": "An agent: goal, tool, action, result",
           "en": "An agent, on the other hand, receives a goal.",
           "hi": "दूसरी तरफ़, Agent को मिलता है एक लक्ष्य।"
         },
@@ -248,6 +268,7 @@
         },
         {
           "key": "s04_11",
+          "topic": "Same chat window, different abilities",
           "en": "One important point. You can talk to an agent through a chat window too.",
           "hi": "एक ज़रूरी बात। Agent से भी आप Chat करके ही बात कर सकते हैं।"
         },
@@ -273,11 +294,13 @@
         },
         {
           "key": "s05_02",
+          "topic": "The agent loop",
           "en": "At its core is a {cycle}cycle called the agent {loop}loop.",
           "hi": "इसके केंद्र में एक {cycle}चक्र है, जिसे Agent {loop}Loop कहते हैं।"
         },
         {
           "key": "s05_03",
+          "topic": "Step 1: the goal (will it rain in Delhi?)",
           "en": "Step one: receive the {goal}goal. The user gives the agent an instruction.",
           "hi": "पहला कदम, {goal}Goal लेना। यूज़र Agent को एक निर्देश देता है।"
         },
@@ -288,6 +311,7 @@
         },
         {
           "key": "s05_05",
+          "topic": "Step 2: decide",
           "en": "Step two: {decide}decide. The {model}model decides what the next action should be.",
           "hi": "दूसरा कदम, {decide}Decide, यानी फ़ैसला। {model}Model तय करता है कि अब अगला काम क्या होगा।"
         },
@@ -298,16 +322,19 @@
         },
         {
           "key": "s05_07",
+          "topic": "Step 3: act with a browser",
           "en": "Step three: {act}act. The agent uses a tool to do that work. Here, it {browser}opens the website with a browser.",
           "hi": "तीसरा कदम, {act}Act, यानी काम। Agent एक Tool से वह काम करता है। यहाँ उसने {browser}Browser से Website खोली।"
         },
         {
           "key": "s05_08",
+          "topic": "Step 4: observe: the page fails to load",
           "en": "Step four: {observe}observe. The tool returns a result. But it turns out the page {load}didn't even load.",
           "hi": "चौथा कदम, {observe}Observe, यानी देखना। Tool एक नतीजा लौटाता है। लेकिन पता चला, Page तो {load}लोड ही नहीं हुआ।"
         },
         {
           "key": "s05_09",
+          "topic": "Step 5: evaluate, then loop again",
           "en": "Step five: {evaluate}evaluate. The agent checks: has the goal been reached? {no}No, not yet.",
           "hi": "पाँचवाँ कदम, {evaluate}Evaluate, यानी जाँच। Agent देखता है, क्या लक्ष्य पूरा हुआ? {no}नहीं, अभी नहीं।"
         },
@@ -318,6 +345,7 @@
         },
         {
           "key": "s05_11",
+          "topic": "Second try: a different website",
           "en": "This time, the agent decides to try a different website.",
           "hi": "इस बार Agent ने तय किया कि वह कोई दूसरी Website आज़माएगा।"
         },
@@ -333,6 +361,7 @@
         },
         {
           "key": "s05_14",
+          "topic": "The agent adapts after every result",
           "en": "Notice that the agent didn't know every step from the start. After each {result}result, it adjusted its next decision.",
           "hi": "ध्यान दीजिए, Agent को शुरू से सारे कदम पता नहीं थे। हर {result}नतीजे को देखकर, उसने अपना अगला फ़ैसला बदला।"
         },
@@ -358,16 +387,19 @@
         },
         {
           "key": "s06_02",
+          "topic": "A model needs tools to act",
           "en": "Because a model on its own can only {text}produce text. To work with the {outside}outside world, it needs tools.",
           "hi": "क्योंकि Model खुद सिर्फ़ {text}टेक्स्ट बना सकता है। {outside}बाहरी दुनिया के साथ काम करने के लिए, उसे Tools चाहिए।"
         },
         {
           "key": "s06_03",
+          "topic": "Filesystem",
           "en": "Take the filesystem. With it, files can be {read}read, new files {create}created, and existing files {change}changed.",
           "hi": "जैसे, Filesystem। इससे Files {read}पढ़ी जा सकती हैं, नई File {create}बनाई जा सकती है, और Files {change}बदली जा सकती हैं।"
         },
         {
           "key": "s06_04",
+          "topic": "Terminal and browser",
           "en": "With a terminal, commands and programs can be run.",
           "hi": "Terminal से Commands और प्रोग्राम चलाए जा सकते हैं।"
         },
@@ -378,6 +410,7 @@
         },
         {
           "key": "s06_06",
+          "topic": "API and database",
           "en": "With an API, it can {talk}talk to another service, like a weather or maps service.",
           "hi": "API से किसी दूसरी Service के साथ {talk}बात की जा सकती है, जैसे मौसम या मैप की Service।"
         },
@@ -393,6 +426,7 @@
         },
         {
           "key": "s06_09",
+          "topic": "The model decides, the tool does the work",
           "en": "The model decides which {tool}tool is needed and what should be done. It only {request}sends a request.",
           "hi": "Model तय करता है कि कौन सा {tool}Tool चाहिए, और क्या काम करना है। वह सिर्फ़ एक {request}अनुरोध भेजता है।"
         },
@@ -403,6 +437,7 @@
         },
         {
           "key": "s06_11",
+          "topic": "The brain and the hands",
           "en": "Put simply, the model is the {brain}brain, and the tools are the {hands}hands.",
           "hi": "आसान शब्दों में, Model है {brain}दिमाग, और Tool हैं {hands}हाथ।"
         }
@@ -423,6 +458,7 @@
         },
         {
           "key": "s07_02",
+          "topic": "The task: a crashing calculator app",
           "en": "The user tells the agent: the program is crashing, {find}find the cause and fix it.",
           "hi": "यूज़र ने Agent से कहा, प्रोग्राम Crash हो रहा है, वजह {find}ढूँढकर इसे ठीक कर दो।"
         },
@@ -433,6 +469,7 @@
         },
         {
           "key": "s07_04",
+          "topic": "Reading the project files",
           "en": "First, the agent looks at the list of files in the project.",
           "hi": "सबसे पहले Agent ने प्रोजेक्ट की Files की लिस्ट देखी।"
         },
@@ -443,11 +480,13 @@
         },
         {
           "key": "s07_06",
+          "topic": "Running the tests",
           "en": "Then it {terminal}runs the program's tests in the terminal to see the problem for itself.",
           "hi": "फिर उसने {terminal}Terminal में प्रोग्राम के Tests चलाए, ताकि दिक्कत खुद देखी जा सके।"
         },
         {
           "key": "s07_07",
+          "topic": "ZeroDivisionError",
           "en": "A test {fail}fails. The error is {zero}ZeroDivisionError, a division by zero.",
           "hi": "Test {fail}फ़ेल हो गया। Error आया, {zero}Zero Division Error, यानी शून्य से भाग।"
         },
@@ -458,11 +497,13 @@
         },
         {
           "key": "s07_09",
+          "topic": "The fix: return zero for an empty list",
           "en": "So it makes a small change to the code. If the list is {empty}empty, return zero right away.",
           "hi": "इसलिए उसने Code में एक छोटा सा बदलाव किया। लिस्ट {empty}खाली हो, तो पहले ही शून्य लौटा दो।"
         },
         {
           "key": "s07_10",
+          "topic": "The tests pass",
           "en": "Then it runs the tests again.",
           "hi": "फिर उसने दोबारा Tests चलाए।"
         },
@@ -473,11 +514,13 @@
         },
         {
           "key": "s07_12",
+          "topic": "The agent reports back",
           "en": "Finally, the agent reports {problem}what the problem was, {fix}what it changed, and {result}that everything works now.",
           "hi": "आखिर में Agent ने बताया कि {problem}दिक्कत क्या थी, क्या {fix}बदला, और अब {result}सब कुछ ठीक है।"
         },
         {
           "key": "s07_13",
+          "topic": "All five parts, one loop",
           "en": "See? {goal}Goal, {model}model, {tools}tools, {environment}environment and {feedback}feedback, all five parts worked together here. And at every step, the agent {loop}loop went around again.",
           "hi": "देखा आपने? {goal}Goal, {model}Model, {tools}Tools, {environment}Environment और {feedback}Feedback, पाँचों हिस्सों ने यहाँ एक साथ काम किया। और हर कदम पर, Agent {loop}Loop बार-बार घूमा।"
         }
@@ -493,11 +536,13 @@
       "lines": [
         {
           "key": "s08_01",
+          "topic": "Agents are not magic",
           "en": "But one thing is important to remember. AI agents are {powerful}powerful, {magic}but they're not magic.",
           "hi": "लेकिन एक बात याद रखना ज़रूरी है। AI Agent {powerful}ताकतवर है, लेकिन {magic}जादू नहीं।"
         },
         {
           "key": "s08_02",
+          "topic": "Risks: wrong decisions and wrong tool use",
           "en": "An agent can make wrong decisions.",
           "hi": "Agent गलत फ़ैसले ले सकता है।"
         },
@@ -508,6 +553,7 @@
         },
         {
           "key": "s08_04",
+          "topic": "Deleted data and endless loops",
           "en": "It can even change, or delete, important files or data.",
           "hi": "यहाँ तक कि ज़रूरी Files या जानकारी बदल सकता है, या मिटा भी सकता है।"
         },
@@ -518,6 +564,7 @@
         },
         {
           "key": "s08_06",
+          "topic": "Permissions, safeguards, human oversight",
           "en": "That's why an agent needs {permissions}permissions. It needs {safeguards}safeguards. And it needs human {oversight}oversight.",
           "hi": "इसलिए Agent को चाहिए {permissions}Permission, यानी इजाज़त। चाहिए {safeguards}Safeguard, यानी सुरक्षा के इंतज़ाम। और चाहिए इंसान की {oversight}निगरानी।"
         },
@@ -528,6 +575,7 @@
         },
         {
           "key": "s08_08",
+          "topic": "More power, more responsibility",
           "en": "Remember: the more power you give an AI, the greater your {responsibility}responsibility to keep that power under control.",
           "hi": "याद रखिए, AI को जितनी ज़्यादा ताकत देंगे, उस ताकत को काबू में रखने की {responsibility}ज़िम्मेदारी भी उतनी ही ज़्यादा होगी।"
         }
@@ -543,6 +591,7 @@
       "lines": [
         {
           "key": "s09_01",
+          "topic": "Recap: what an agent is and how it works",
           "en": "Now you understand {what}what an AI agent really is, {how}how it works, and {differs}how it differs from a regular chatbot.",
           "hi": "अब आप समझ गए हैं कि AI Agent असल में {what}क्या है, यह {how}कैसे काम करता है, और एक आम Chatbot से इसका {differs}फ़र्क कहाँ है।"
         },
@@ -553,6 +602,7 @@
         },
         {
           "key": "s09_03",
+          "topic": "Coming up in the next lessons",
           "en": "In the upcoming lessons, we'll go much deeper.",
           "hi": "आने वाले Lessons में हम और गहराई में जाएँगे।"
         },
@@ -563,11 +613,13 @@
         },
         {
           "key": "s09_05",
+          "topic": "Building websites and apps",
           "en": "And that's not all: we'll also learn to build {website}websites and {app}apps ourselves.",
           "hi": "और सिर्फ़ इतना ही नहीं, हम खुद {website}Websites और {app}Apps बनाना भी सीखेंगे।"
         },
         {
           "key": "s09_06",
+          "topic": "Just the beginning",
           "en": "This was just the {beginning}beginning of our journey into Agentic AI.",
           "hi": "यह था Agentic AI सीखने के हमारे सफ़र की बस {beginning}शुरुआत।"
         }

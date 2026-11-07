@@ -9,6 +9,10 @@
 acts on (needs_agent / needs_approval / blocked / failed). Every stage is fingerprinted
 by its inputs, so re-running skips everything already done and resumes after an
 interruption; per-language parts are tracked separately (e.g. render:hi, render:en).
+
+`run --lang en` produces only some versions (voice -> deliver); the checks, draft and
+review before them always cover every version. That keeps one blocked version (e.g. paid
+credits exhausted for a Hindi dub) from holding back the others.
 """
 from __future__ import annotations
 
@@ -18,6 +22,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from . import narration as N
+from . import providers
 from . import render as R
 from . import subtitles as SUB
 from . import tasks as T
@@ -25,19 +30,22 @@ from . import voice as V
 from .assemble import assemble as do_assemble, timeline as build_timeline
 from .config import load_production
 from .deliver import deliver as do_deliver, report_md
-from .errors import EXIT, AAError, InputError, MissingCapability, StageFailed, ValidationFailed
+from .errors import EXIT, AAError, InputError, MissingCapability, StageFailed, UsageError, ValidationFailed
 from .log import log
 from .plan import parse_plan
 from .scenes import check as check_scenes, thumbnail_ref
 from .secrets import CREDS, redact
 from .state import RunLock, State
-from .util import (atomic_write_text, file_fp, fingerprint, now_iso, read_json, rel, resolve, tree_fp, which)
-from . import providers
+from .util import (atomic_write_json, atomic_write_text, file_fp, fingerprint, now_iso, read_json, rel, resolve,
+                   tree_fp, which)
 
 STAGES = [("validate", "auto"), ("approve", "gate"), ("ingest", "auto"), ("translate", "agent"),
           ("scenes", "agent"), ("draft", "auto"), ("review", "agent"), ("voice", "auto"), ("render", "auto"),
           ("assemble", "auto"), ("subtitles", "auto"), ("verify", "auto"), ("deliver", "auto")]
 STAGE_IDS = [s for s, _ in STAGES]
+PRODUCTION_STAGES = ("voice", "render", "assemble", "subtitles", "verify", "deliver")   # `run --lang` applies here
+BLOCKED_CODES = ("missing_credential", "invalid_credential", "missing_capability", "provider_blocked",
+                 "quota_exceeded")
 _HERE = Path(__file__).resolve().parent
 
 
@@ -86,21 +94,39 @@ class Pipeline:
         self.prod = load_production(production)
         self.state = State(self.prod.build_dir)
         self._narr = None
+        self._narr_fp = None
+        self.selected: list[str] | None = None     # `run --lang`: the versions this run produces
 
     # ------------------------------------------------------------ helpers
     @property
     def narr(self):
-        if self._narr is None or self._narr_fp != (file_fp(self.prod.narration_path) if self.prod.narration_path.exists() else None):
-            self._narr = N.load_narration(self.prod.narration_path)
-            self._narr_fp = file_fp(self.prod.narration_path) if self._narr else None
+        path = self.prod.narration_path
+        cur = file_fp(path) if path.exists() else None
+        if self._narr is None or self._narr_fp != cur:
+            self._narr = N.load_narration(path)
             if self._narr is None:
-                raise InputError(f"{rel(self.prod.narration_path)} does not exist yet (run the ingest stage)")
+                raise InputError(f"{rel(path)} does not exist yet (run the ingest stage)")
+            self._narr_fp = cur
         return self._narr
 
-    _narr_fp = None
-
     def narr_fp(self) -> str:
-        return file_fp(self.prod.narration_path)
+        """The narration as the stages see it: metadata such as topics is left out."""
+        return N.content_fingerprint(self.prod.narration_path)
+
+    def select(self, langs: list[str] | None) -> None:
+        """Restrict the production stages to these versions (plus the masters of selected dubs)."""
+        if not langs:
+            self.selected = None
+            return
+        bad = [l for l in langs if l not in self.prod.versions]
+        if bad:
+            raise UsageError(f"--lang {','.join(bad)}: not a version of this production (versions: "
+                             f"{', '.join(self.prod.langs)})")
+        self.selected = self.prod.with_masters(langs)
+
+    def sel(self, langs) -> list[str]:
+        """`langs` restricted to the versions this run produces."""
+        return [l for l in langs if self.selected is None or l in self.selected]
 
     def render_narr_fp(self) -> str:
         """The narration as the renders see it: lines and the text of the rendered (and subtitle)
@@ -194,6 +220,44 @@ class Pipeline:
             v["recommended_budget"] = int(v["credits"] * 1.15 + 50) if v["credits"] else 0
         return out
 
+    def master_timeline(self, lang: str) -> dict | None:
+        """Timeline of a full version: the final assembly if it matches the narration, otherwise
+        one built from its draft render (same timing to within a frame or two per line)."""
+        want = [ln["key"] for _, ln in self.narr.lines()]
+        asm = self.state.stage(f"assemble:{lang}")
+        if asm.get("status") == "done" and asm.get("timeline"):
+            tl = read_json(resolve(asm["timeline"]))
+            if tl and [ln["key"] for ln in tl["lines"]] == want:
+                return tl
+        for kind in ("final", "draft"):
+            idx = read_json(R.index_path(self.prod, lang, kind))
+            man = V.load_manifest(self.prod, lang, draft=(kind == "draft"))
+            if idx and idx.get("complete") and man and all(k in man["lines"] for k in want):
+                try:
+                    return build_timeline(self.prod, self.narr, lang, idx, man)
+                except (AAError, OSError, KeyError):
+                    continue
+        return None
+
+    def dub_forecast(self, lang: str) -> dict | None:
+        """Predicted fit of a dub version on its master's timeline (None until the master has a
+        draft or final render)."""
+        from .forecast import dub_forecast
+        tl = self.master_timeline(self.prod.versions[lang].follow)
+        return dub_forecast(self.prod, self.narr, lang, tl) if tl else None
+
+    def _forecast_brief(self) -> dict:
+        out = {}
+        for lang in self.prod.dub_langs:
+            try:
+                f = self.dub_forecast(lang)
+            except (AAError, OSError, KeyError, ValueError):
+                f = None
+            if f:
+                out[lang] = {"model": f["model"], "segments_at_risk": [
+                    {k: s[k] for k in ("section", "lines", "window", "need", "status")} for s in f["at_risk"][:12]]}
+        return out
+
     def config_summary(self) -> dict:
         p = self.prod
         return {"title": p.title, "source_language": p.source_language,
@@ -203,7 +267,8 @@ class Pipeline:
                 "subtitles": f"{p.subtitles.language} as {'+'.join(p.subtitles.formats)} files (never burned in)",
                 "video": f"{p.video.width}x{p.video.height}@{p.video.fps} {p.video.encoder}"
                          + (f" crf {p.video.crf}" if p.video.encoder != 'copy' else ""),
-                "draft_before_paid_voice": p.review.draft, "visual_review": p.review.visual_review}
+                "draft_before_paid_voice": p.review.draft, "visual_review": p.review.visual_review,
+                **({"own_language_subtitles": p.own_subtitle_langs()} if p.own_subtitle_langs() else {})}
 
     # ------------------------------------------------------------ stages
     def s_validate(self, force=False):
@@ -262,6 +327,7 @@ class Pipeline:
         budget_args = " ".join(f"--budget {k}={v['recommended_budget']}" for k, v in est.items())
         info = {"reason": "the configuration changed since it was approved" if ap else "not yet approved",
                 "config": self.config_summary(), "estimate": est,
+                **({"dub_forecast": fc} if (fc := self._forecast_brief()) else {}),
                 "command": f"python -m automatio approve {self.prod.slug} {budget_args}".strip(),
                 "instructions": "Show the configuration and estimate to the user and ask for approval. Run the "
                                 "command only after the user explicitly approves (it records who approved and "
@@ -295,9 +361,25 @@ class Pipeline:
         rep = N.validate(self.narr, langs=p.langs, subtitle_lang=p.subtitles.language, source_lang=p.source_language,
                          marker_langs=p.marker_langs, dub_langs=p.dub_langs)
         if rep["errors"]:
-            raise _Agent(T.translate_task(p, self.narr, rep))
+            raise _Agent(T.translate_task(p, self.narr, rep, self._forecasts()))
+        warn = rep["warnings"][:40]
+        for lang, f in self._forecasts().items():
+            warn += [f"{lang} dub forecast: {sg['section']} {sg['lines'][0]}..{sg['lines'][-1]} needs ~{sg['need']:.1f}s "
+                     f"in a {sg['window']:.1f}s slot ({sg['status']})" for sg in f["at_risk"][:20]]
         return {"summary": f"all lines present in {', '.join(dict.fromkeys([p.source_language, *p.langs]))}",
-                "warnings": rep["warnings"][:40]}
+                "warnings": warn}
+
+    def _forecasts(self) -> dict:
+        out = {}
+        for lang in self.prod.dub_langs:
+            try:
+                f = self.dub_forecast(lang)
+            except (AAError, OSError, KeyError, ValueError) as e:
+                log.debug(f"dub forecast for {lang} unavailable: {e}")
+                f = None
+            if f:
+                out[lang] = f
+        return out
 
     def s_scenes(self, force=False):
         rep = check_scenes(self.prod, self.narr)
@@ -402,12 +484,31 @@ class Pipeline:
 
     def s_voice(self, force=False):
         out = {}
-        for lang in self.prod.langs:
+        for lang in self.sel(self.prod.langs):
+            if lang in self.prod.dub_langs:
+                self._guard_dub(lang)
             out[lang] = self._voice_lang(lang, draft=False)
-        retakes = {l: r for l in self.prod.dub_langs if (r := self._retake(l))}
+        retakes = {l: r for l in self.sel(self.prod.dub_langs) if (r := self._retake(l))}
         return {"summary": "; ".join(f"{l}: {r.get('summary', '')}" for l, r in out.items())
                 + "".join(f"; {l}: re-took {len(r)} clip(s) with cut-off endings" for l, r in retakes.items()),
                 **({"retakes": retakes} if retakes else {})}
+
+    def _guard_dub(self, lang: str) -> None:
+        """Before paying for a dub: stop if a segment is forecast not to fit even when every unvoiced
+        line comes out a little shorter than predicted. Rewriting is free; a re-voice is paid twice."""
+        prof = self.prod.profile(lang)
+        if not providers.get(prof.provider).paid:
+            return
+        if all(j.cached for j in V.plan(self.prod, self.narr, lang, prof)):
+            return
+        from .forecast import dub_forecast
+        tl = self.master_timeline(self.prod.versions[lang].follow)
+        if not tl:
+            return
+        f = dub_forecast(self.prod, self.narr, lang, tl, margin=-0.05)
+        bad = [s for s in f["segments"] if s["status"] == "overflow" and s["unvoiced"]]
+        if bad:
+            raise _Agent(T.dub_fit_task(self.prod, self.narr, lang, f, bad))
 
     def _retake(self, lang: str) -> dict:
         """Paid clips whose ending the provider cut off are voiced again (at most `dub.retakes`
@@ -438,13 +539,12 @@ class Pipeline:
             V.generate(self.prod, lang, prof, bad, self.state, approval=self.state.approval)
         if took:
             fp = V.stage_fingerprint(self.prod, lang, prof, jobs)
-            from .util import atomic_write_json
             atomic_write_json(V.manifest_path(self.prod, lang),
                               V.build_manifest(self.prod, lang, prof, jobs, draft=False, fp=fp))
         return took
 
     def s_render(self, force=False):
-        res = self._render("final", self.prod.full_langs, force=force)
+        res = self._render("final", self.sel(self.prod.full_langs), force=force)
         return {"summary": "; ".join(f"{l}: {r['summary']}" for l, r in res.items())}
 
     def _parts(self, lang: str) -> tuple[dict, dict]:
@@ -457,7 +557,7 @@ class Pipeline:
 
     def s_assemble(self, force=False):
         out = {}
-        for lang in self.prod.full_langs:
+        for lang in self.sel(self.prod.full_langs):
             idx, man = self._parts(lang)
             v = self.prod.video
             fp = fingerprint("assemble-1", idx["fingerprint"], man["fingerprint"], self.prod.audio.__dict__,
@@ -467,7 +567,7 @@ class Pipeline:
             fresh = self.state.fresh(sid, fp) and resolve(self.state.stage(sid).get("final", "missing")).exists()
             r = self._do(sid, fp, lambda: self._assemble_one(lang, idx, man), force=force or not fresh)
             out[lang] = r
-        for lang in self.prod.dub_langs:
+        for lang in self.sel(self.prod.dub_langs):
             out[lang] = self._assemble_dub(lang, force)
         return {"summary": "; ".join(f"{l}: {r.get('total', 0) / 60:.2f} min" for l, r in out.items())}
 
@@ -506,15 +606,15 @@ class Pipeline:
 
     def s_subtitles(self, force=False):
         out = {}
-        for lang in self.prod.full_langs:
+        for lang in self.sel(self.prod.full_langs):
             idx, man = self._parts(lang)
-            fp = fingerprint("subs-1", idx["fingerprint"], man["fingerprint"], self.prod.subtitles.__dict__,
+            fp = fingerprint("subs-1", idx["fingerprint"], man["fingerprint"], self._subs_settings(),
                              code_fp("subtitles", "narration"))
             sid = f"subtitles:{lang}"
             files = self.state.stage(sid).get("files", {})
             fresh = self.state.fresh(sid, fp) and all(resolve(f).exists() for f in files.values())
             out[lang] = self._do(sid, fp, lambda: self._subs_one(lang, idx, man), force=force or not fresh)
-        for lang in self.prod.dub_langs:
+        for lang in self.sel(self.prod.dub_langs):
             m = self.prod.versions[lang].follow
             ms = self.state.stage(f"subtitles:{m}")
             fp = fingerprint("subs-dub-1", ms.get("fingerprint"), ms.get("files"))
@@ -522,38 +622,97 @@ class Pipeline:
                 "files": ms["files"], "cues": ms.get("cues"), "timing": f"shared with {m}",
                 "summary": f"{ms.get('cues')} cues, shared with the {m} version (same picture and line slots)"},
                 force=force)
-        return {"summary": "; ".join(f"{l}: {r.get('cues')} cues" for l, r in out.items())}
+        own = {}
+        for lang in self.sel(self.prod.own_subtitle_langs()):
+            own[lang] = self._own_subs(lang, force)
+        return {"summary": "; ".join(f"{l}: {r.get('cues')} cues" for l, r in out.items())
+                + "".join(f"; {l} in {l}: {r.get('cues')} cues" for l, r in own.items())}
+
+    def _subs_settings(self) -> dict:
+        """Subtitle settings that shape the main subtitle files (own_language only adds files, so
+        switching it on never re-times the existing ones)."""
+        return {k: v for k, v in self.prod.subtitles.__dict__.items() if k != "own_language"}
 
     def _subs_one(self, lang, idx, man):
         tl = build_timeline(self.prod, self.narr, lang, idx, man)
         placed = [(ln["start"], man["lines"][ln["key"]]) for ln in tl["lines"]]
         same = lang == self.prod.subtitles.language
         cues = SUB.build(placed, same_language=same, settings=self.prod.subtitles)
-        d = self.prod.build_dir / "subtitles" / lang
-        files = {}
-        for fmt in self.prod.subtitles.formats:
-            path = d / f"subtitles-{self.prod.subtitles.language}.{fmt}"
-            atomic_write_text(path, SUB.srt_text(cues) if fmt == "srt" else SUB.vtt_text(cues))
-            files[fmt] = rel(path)
+        files = self._write_subs(lang, self.prod.subtitles.language, cues)
         issues = SUB.check(cues, tl["total"], self.prod.subtitles)
         return {"files": files, "cues": len(cues), "timing": "word-level" if same else "sentence-aligned",
                 "summary": f"{len(cues)} cues ({'word-level' if same else 'sentence-aligned to the narration'})",
                 "warnings": [f"cue {i['cue']}: {i['issue']}" for i in issues][:30]}
 
+    def _write_subs(self, lang: str, sub_lang: str, cues) -> dict:
+        d = self.prod.build_dir / "subtitles" / lang
+        files = {}
+        for fmt in self.prod.subtitles.formats:
+            path = d / f"subtitles-{sub_lang}.{fmt}"
+            atomic_write_text(path, SUB.srt_text(cues) if fmt == "srt" else SUB.vtt_text(cues))
+            files[fmt] = rel(path)
+        return files
+
+    def _own_subs(self, lang: str, force=False) -> dict:
+        """Subtitles in a version's own language, timed to its own voice (for a dub: as placed and
+        time-stretched on the master timeline)."""
+        ver = self.prod.versions[lang]
+        man = V.load_manifest(self.prod, lang)
+        if ver.mode == "dub":
+            asm = self.state.stage(f"assemble:{lang}")
+            if asm.get("status") != "done" or not man:
+                raise StageFailed(f"{lang}: the dub assembly is needed before its own-language subtitles")
+            src = ("dub", file_fp(resolve(asm["timeline"])), man["fingerprint"])
+        else:
+            idx, man = self._parts(lang)
+            src = ("full", idx["fingerprint"], man["fingerprint"])
+        fp = fingerprint("subs-own-1", src, self._subs_settings(), code_fp("subtitles", "narration"))
+        sid = f"subtitles:{lang}:own"
+        files = self.state.stage(sid).get("files", {})
+        fresh = self.state.fresh(sid, fp) and all(resolve(f).exists() for f in files.values())
+        return self._do(sid, fp, lambda: self._own_subs_one(lang, man), force=force or not fresh)
+
+    def _own_subs_one(self, lang: str, man: dict) -> dict:
+        ver = self.prod.versions[lang]
+        placed = []
+        if ver.mode == "dub":
+            tl = read_json(resolve(self.state.stage(f"assemble:{lang}")["timeline"]))
+            for ln in tl["lines"]:
+                e = man["lines"][ln["key"]]
+                sp = float(ln.get("speed") or 1.0)
+                t0 = ln.get("clip_t0", ln["start"])
+                words = [[w0 / sp, d / sp, w] for w0, d, w in e["words"]]
+                placed.append((t0, {"subtitle": e["display"], "spoken": e["spoken"], "words": words}))
+        else:
+            idx, man = self._parts(lang)
+            tl = build_timeline(self.prod, self.narr, lang, idx, man)
+            for ln in tl["lines"]:
+                e = man["lines"][ln["key"]]
+                placed.append((ln["start"], {"subtitle": e["display"], "spoken": e["spoken"], "words": e["words"]}))
+        cues = SUB.build(placed, same_language=True, settings=self.prod.subtitles)
+        files = self._write_subs(lang, lang, cues)
+        issues = SUB.check(cues, tl["total"], self.prod.subtitles)
+        return {"files": files, "cues": len(cues), "language": lang,
+                "summary": f"{len(cues)} {lang} cues timed to the {lang} voice",
+                "warnings": [f"{lang} cue {i['cue']}: {i['issue']}" for i in issues][:30]}
+
     def s_verify(self, force=False):
         from .verify import verify
         out, failed = {}, []
-        for lang in self.prod.langs:
+        for lang in self.sel(self.prod.langs):
             asm = self.state.stage(f"assemble:{lang}")
             subs = self.state.stage(f"subtitles:{lang}")
+            own = (self.state.stage(f"subtitles:{lang}:own").get("files")
+                   if lang in self.prod.own_subtitle_langs() else None)
             idx, man = self._parts(lang)
             fp = fingerprint("verify-1", file_fp(resolve(asm["final"])),
                              [file_fp(resolve(f)) for f in subs["files"].values()], self.prod.audio.__dict__,
-                             self.prod.video.__dict__, self.prod.subtitles.__dict__, code_fp("verify", "audio"),
+                             self.prod.video.__dict__, self._subs_settings(), code_fp("verify", "audio"),
                              *([code_fp("dub"), file_fp(resolve(asm["voiceover_mp3"]))]
-                               if self.prod.versions[lang].mode == "dub" else []))
+                               if self.prod.versions[lang].mode == "dub" else []),
+                             *([[file_fp(resolve(f)) for f in own.values()]] if own else []))
             sid = f"verify:{lang}"
-            r = self._do(sid, fp, lambda: self._verify_one(verify, lang, asm, subs, man), force=force)
+            r = self._do(sid, fp, lambda: self._verify_one(verify, lang, asm, subs, man, own), force=force)
             out[lang] = r
             if r.get("result", {}).get("status") == "fail":
                 failed.append(lang)
@@ -566,8 +725,8 @@ class Pipeline:
                                    details={"failed": bad})
         return {"summary": "; ".join(f"{l}: {r['result']['status']}" for l, r in out.items())}
 
-    def _verify_one(self, verify, lang, asm, subs, man):
-        res = verify(self.prod, self.narr, lang, asm, subs["files"], man)
+    def _verify_one(self, verify, lang, asm, subs, man, own=None):
+        res = verify(self.prod, self.narr, lang, asm, subs["files"], man, own_files=own)
         if self.prod.versions[lang].mode == "dub":
             from . import dub
             for c in res["checks"]:
@@ -578,19 +737,19 @@ class Pipeline:
             res["checks"] += dub.checks(self.prod, lang, asm, res)
             res["status"] = "fail" if any(c["status"] == "fail" for c in res["checks"]) else (
                 "warn" if any(c["status"] == "warn" for c in res["checks"]) else "pass")
-        if res["status"] == "fail":
-            # recorded as a result (not an exception) so the report shows every check
-            pass
+        # a failing check is recorded as a result (not raised here), so the report shows every check
         warns = [f"{c['check']}: {c['detail']}" for c in res["checks"] if c["status"] == "warn"]
         return {"result": res, "summary": f"{res['status']} ({sum(c['status'] == 'pass' for c in res['checks'])}"
                                           f"/{len(res['checks'])} checks pass)", "warnings": warns}
 
     def s_deliver(self, force=False):
         per = {}
-        for lang in self.prod.langs:
+        for lang in self.sel(self.prod.langs):
             idx, man = self._parts(lang)
+            own = self.state.stage(f"subtitles:{lang}:own")
             per[lang] = {"assemble": self.state.stage(f"assemble:{lang}"),
                          "subtitles": self.state.stage(f"subtitles:{lang}")["files"],
+                         "own_subtitles": own.get("files") if lang in self.prod.own_subtitle_langs() else None,
                          "verify": self.state.stage(f"verify:{lang}")["result"],
                          "manifest": man, "index": idx,
                          "sheets": self.state.stage(f"render:{lang}").get("sheets", [])
@@ -603,9 +762,10 @@ class Pipeline:
                 thumb = R.render_thumbnail(self.prod, ref)
             except AAError as e:
                 warn.append(f"thumbnail not rendered: {e.message}")
-        man = do_deliver(self.prod, self.narr, per, self.state, thumb)
+        man = do_deliver(self.prod, self.narr, per, self.state, thumb, keep_others=self.selected is not None)
+        warn += man.pop("_warnings", [])
         return {"summary": f"delivered to {rel(self.prod.output_dir)}/ ("
-                           + ", ".join(f"{v['label']}/" for v in man["versions"].values()) + ")",
+                           + ", ".join(f"{man['versions'][l]['label']}/" for l in per) + ")",
                 "output": rel(self.prod.output_dir), "warnings": warn}
 
     # ------------------------------------------------------------ loop
@@ -625,11 +785,28 @@ class Pipeline:
             return self.review_fp()
         return fingerprint(sid, now_iso())      # validate + composite stages: always (re)check their parts
 
-    def run(self, until: str | None = None, only: str | None = None, force: tuple = ()) -> Outcome:
+    def other_versions_hint(self, sid: str) -> str | None:
+        """When a production stage is blocked for some versions: the command that still produces
+        the others (`run --lang`)."""
+        if sid not in PRODUCTION_STAGES:
+            return None
+        failed = {k.split(":")[1] for k, v in self.state.data.get("stages", {}).items()
+                  if k.startswith(sid + ":") and v.get("status") == "failed"}
+        failed |= {l for l in self.prod.dub_langs if self.prod.versions[l].follow in failed}
+        others = [l for l in self.sel(self.prod.langs) if l not in failed]
+        if not failed or not others:
+            return None
+        return (f"The other version(s) can still be produced and delivered: "
+                f"python -m automatio run {self.prod.slug} --lang {','.join(others)}")
+
+    def run(self, until: str | None = None, only: str | None = None, force: tuple = (),
+            langs: list[str] | None = None) -> Outcome:
+        self.select(langs)
+        rest = [l for l in self.prod.langs if self.selected is not None and l not in self.selected]
         with RunLock(self.prod.build_dir, f"run {self.prod.slug}"):
             for f in force:
                 self.state.invalidate(f)
-            self.state.event("run_start", until=until, only=only, force=list(force))
+            self.state.event("run_start", until=until, only=only, force=list(force), langs=self.selected)
             for sid, kind in STAGES:
                 if only and sid != only:
                     continue
@@ -642,13 +819,20 @@ class Pipeline:
                     always = sid in self.COMPOSITE or sid in ("validate", "approve", "review")
                     try:
                         self._do(sid, self._stage_fp(sid), lambda: fn(force=forced), force=forced or always)
+                        if rest and sid in PRODUCTION_STAGES:
+                            st = self.state.stage(sid)
+                            self.state.mark(sid, "partial", summary=f"{st.get('summary', '')} [not produced in "
+                                            f"this run: {', '.join(rest)}]")
                     except _Agent as a:
                         return Outcome("needs_agent", sid, a.task["summary"], task=a.task)
                     except _Approval as a:
                         return Outcome("needs_approval", sid, "the production configuration needs the user's "
                                        "approval", approval=a.info)
                     except AAError as e:
-                        return Outcome(e.outcome, sid, e.message, error=e.to_dict())
+                        err = e.to_dict()
+                        if e.outcome == "blocked" and (hint := self.other_versions_hint(sid)):
+                            err["hint"] = hint
+                        return Outcome(e.outcome, sid, e.message, error=err)
                     except Exception as e:
                         return Outcome("failed", sid, f"internal error in {sid}: {type(e).__name__}: {redact(e)}",
                                        error={"code": "internal_error", "message": redact(str(e)),
@@ -657,9 +841,14 @@ class Pipeline:
                     return Outcome("done", sid, f"stopped after {sid} as requested", data={"partial": True})
             if only:
                 return Outcome("done", only, f"ran {only}", data={"partial": True})
-            self.state.event("run_done")
+            self.state.event("run_done", langs=self.selected)
             atomic_write_text(self.prod.output_dir / "report.md",
                               report_md(self.prod, self.state, read_json(self.prod.output_dir / "manifest.json")))
+            if rest:
+                return Outcome("done", "deliver", f"complete for {', '.join(self.selected)}: "
+                               f"{rel(self.prod.output_dir)}/ (not produced: {', '.join(rest)})",
+                               data={"output": rel(self.prod.output_dir), "partial": True,
+                                     "langs": self.selected, "not_produced": rest})
             return Outcome("done", "deliver", f"complete: {rel(self.prod.output_dir)}/",
                            data={"output": rel(self.prod.output_dir)})
 
@@ -673,8 +862,7 @@ class Pipeline:
             rows.append({"stage": sid, "kind": kind, "status": s.get("status", "pending") if self.enabled(sid)
                          else "skipped", "summary": s.get("summary", ""), "finished_at": s.get("finished_at"),
                          "parts": {k: v.get("status") for k, v in subs.items()}})
-        from .state import RunLock as _RL
-        holder = _RL(self.prod.build_dir, "").holder()
+        holder = RunLock(self.prod.build_dir, "").holder()
         return {"production": self.prod.slug, "title": self.prod.title, "dir": rel(self.prod.dir),
                 "stages": rows, "running": holder, "progress": self.state.read_progress() if holder else None,
                 "approval": {k: v for k, v in (self.state.approval or {}).items() if k != "fingerprint"} or None,
@@ -700,10 +888,22 @@ class Pipeline:
                         "why": "the user must approve the configuration and budget"}
             if status == "failed":
                 err = s.get("error", {})
-                blocked = err.get("code") in ("missing_credential", "invalid_credential", "missing_capability",
-                                              "provider_blocked", "quota_exceeded")
-                return {"action": "report_to_user" if blocked else "fix_and_rerun", "stage": sid, "error": err,
-                        "command": f"python -m automatio run {self.prod.slug}"}
+                blocked = err.get("code") in BLOCKED_CODES
+                out = {"action": "report_to_user" if blocked else "fix_and_rerun", "stage": sid, "error": err,
+                       "command": f"python -m automatio run {self.prod.slug}"}
+                if blocked and (hint := self.other_versions_hint(sid)):
+                    out["hint"] = hint
+                return out
+            if status == "partial":
+                stuck = {k: v.get("error", {}) for k, v in st.items() if k.startswith(sid + ":")
+                         and v.get("status") == "failed" and v.get("error", {}).get("code") in BLOCKED_CODES}
+                if stuck:
+                    part, err = next(iter(stuck.items()))
+                    return {"action": "report_to_user", "stage": part, "error": err,
+                            "why": "the other versions are delivered; this one is blocked",
+                            "command": f"python -m automatio run {self.prod.slug}"}
+                return {"action": "run", "stage": sid, "command": f"python -m automatio run {self.prod.slug}",
+                        "why": f"the last run produced only some versions ({s.get('summary', '')[-80:]})"}
             if status != "done" and status != "skipped":
                 return {"action": "run", "stage": sid, "command": f"python -m automatio run {self.prod.slug}",
                         "why": f"stage {sid} is {status or 'pending'}"}

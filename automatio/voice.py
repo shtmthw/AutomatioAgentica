@@ -25,7 +25,7 @@ from . import cache_root, providers
 from .errors import AAError, BudgetExceeded, ProviderError
 from .log import log
 from .narration import Narration, compose, display, marker_times
-from .util import atomic_write_json, fingerprint, now_iso, probe_duration, read_json, rel, resolve
+from .util import atomic_write_json, fingerprint, now_iso, probe_duration, read_json, rel
 
 
 def cache_dir(provider: str) -> Path:
@@ -278,6 +278,3 @@ def audition(profile, text: str, out_dir: Path, table: dict | None = None) -> Pa
 def load_manifest(prod, lang: str, draft: bool = False) -> dict | None:
     return read_json(manifest_path(prod, lang, draft))
 
-
-def clip_path(entry: dict) -> Path:
-    return resolve(entry["file"])

@@ -46,6 +46,9 @@ def run_doctor(online: bool = False) -> dict:
         flt = subprocess.run(["ffmpeg", "-hide_banner", "-filters"], capture_output=True, text=True, env=env).stdout
         out.append(_c("filter ebur128", " ebur128 " in flt, "available" if " ebur128 " in flt else "missing",
                       "install a full ffmpeg build"))
+        for f, use in (("rubberband", "dub time-stretch"), ("deesser", "dub voice chain")):
+            out.append(_c(f"filter {f}", f" {f} " in flt, ("available" if f" {f} " in flt else "missing") + f" ({use})",
+                          f"install an ffmpeg build with {f} (only needed for dub versions)", critical=False))
     try:
         import manimpango
         fonts = set(manimpango.list_fonts())

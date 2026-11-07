@@ -1,13 +1,16 @@
-# ANIMINFO: how this video was built (and how to rebuild it)
+# ANIMINFO: the production playbook (Episodes 01 and 02)
 
-A playbook for producing this project's result again from scratch: a ~10–11 minute
-beginner lesson, "What is Agentic AI?", with **Hindi narration** (ElevenLabs),
-**English subtitles**, **English on-screen text**, and **100% programmatic animation**.
-It covers what worked, what failed, and the path to follow.
+A playbook for producing this project's lessons again from scratch. Sections 1–11 cover
+Episode 01, "What is Agentic AI?": a ~10–11 minute beginner lesson with **Hindi narration**
+(ElevenLabs), **English subtitles**, **English on-screen text**, and **100% programmatic
+animation**. [Section 12](#12-episode-02-inside-an-ai-agent-english-master--hindi-dub)
+covers Episode 02, "Inside an AI Agent": one English video plus a Hindi voice-over fitted
+to its timeline. Each part covers what worked, what failed, and the path to follow.
 
-> **2.0:** this now runs as a harness-driven pipeline (`python -m automatio`, see
-> [AGENTS.md](AGENTS.md)): two complete videos per production (Hindi + English, each timed
-> to its own narration), English subtitles as separate SRT + VTT files, never burned in.
+> **2.x:** this runs as a harness-driven pipeline (`python -m automatio`, see
+> [AGENTS.md](AGENTS.md)): Hindi + English versions (each timed to its own narration, or
+> one dubbed onto the other's timeline), English subtitles as separate SRT + VTT files,
+> never burned in, plus chapters, topics and timings for every version.
 
 ---
 
@@ -226,3 +229,72 @@ scenes and visuals, cues on the English narration, Andrew at a constant −5 %, 
 word-timed. It is shorter than the Hindi (8:23 vs 10:44) because nothing is padded.
 edge-tts word times run ~45 ms ahead of the decoded MP3 (profile `latency = 0.045`).
 Whisper puts sentence-initial words ~0.3 s early: check onsets against audio energy.
+
+---
+
+## 12. Episode 02 "Inside an AI Agent": English master + Hindi dub
+
+`productions/ep02-inside-the-agent/` (plan `inputs/plan.txt`, decisions in `inputs/notes-1.md`).
+Ten sections, 140 lines, English 13:17 against a 13:00 target. Every section is within the
+plan's ±20 % (Tool Calling 2:21 vs 2:00, the longest, as the plan asked: "go slowly").
+
+**Shape.** The plan asked for ONE English video plus a Hindi voice-only MP3 that can replace the
+English voice without editing. The pipeline's answer is a **dub version** (`mode = "dub"`,
+`follow = "en"`): the English master is rendered and timed to its own narration, and the Hindi
+is fitted onto that timeline and never re-times it (`automatio/dub.py`). Sections and the
+numbered steps of sections 06 and 09 (`[dub] anchors`) start on time. A segment is
+time-stretched (rubberband, formants preserved) only if it would overflow, by the smallest
+step, at most 5 %.
+
+**What worked**
+
+- **Recording plan overrides in the notes.** The plan conflicted with the house rules in places
+  (burn subtitles in; don't reuse the Episode 01 voice; a fallback palette). The user decided
+  each one, and `inputs/notes-1.md` records them: subtitles stay separate, the same English
+  narrator (Andrew), and the Episode 01 palette and loop diagram reused.
+- **A script drafted from the plan and locked by the user.** The plan supplied no narration, so
+  the English script was drafted from it, keeping the plan's required lines word for word
+  ("The model decides. The harness does."), and locked by the user before anything was voiced.
+- **Respellings for the English voice.** edge-tts reads code-ish words badly:
+  `[pronunciation.en]` maps `read_file` -> "read file", `config.txt` -> "config dot T X T",
+  `8080` -> "eighty eighty", `=` -> "equals". Subtitles and the screen keep the written form.
+- **Reusable components.** The plan's recurring elements became `agentic_video/internals.py`:
+  `ModelBox`, `HarnessFrame`, `MessageCard`/`MessageList`, `ToolCard`, `ToolCallCard` (dashed:
+  only a request), `ContextWindow` (meter teal -> amber -> red), the Episode 01 `LoopDiagram`
+  with `focus()` as the episode's "home base", and `StepTracker` for the 9 steps of section 06.
+  Code is shown as unreadable `code_block()` bars, because the plan forbids real source code.
+- **The dub's audio treatment.** Each clip is placed by its audible extent rather than the
+  provider's timings, trimmed, faded (10/50 ms), level-matched (±6 dB), and run through
+  high-pass, de-esser and gentle compression. The voice-only MP3 duplicates the mono stem
+  to both channels at full level (`-ac 2` would pan it 3 dB down).
+- **Re-takes.** ElevenLabs sometimes cuts the last word off. `clip_issues` finds an ending
+  that stops mid-sound, and the voice stage re-voices it (at most `retakes` times, rejected
+  takes kept in `build/<slug>/voice-rejected/`).
+
+**What failed / cost**
+
+- **Credits ran out mid-dub.** The free plan's 10,000 credits a month were exhausted after 32 of
+  140 Hindi lines (1,880 credits spent by this production). About 7,300
+  more are needed. Lessons, now in the pipeline: forecast the dub before voicing it
+  (`check dub`), hear a few sections first (`preview <slug> s01,s02 --lang hi`, cached paid
+  clips + free draft voice), and keep the English delivery current with `run --lang en` while
+  the Hindi waits.
+- **Hindi is longer.** The house Hindi voice speaks about 1.3x as long as Andrew on the same
+  content. Each sentence end costs ~0.55 s and each comma ~0.4 s, so the dub has to be written
+  concise (but complete) from the start.
+- **ElevenLabs alignments overstate length.** The character alignment of a line ends ~0.45 s
+  after the audible end. A first forecast built on word timings made almost every section look
+  too long (20 false overflows). The forecast now measures the audible audio, as the dub
+  fitting does: ~6.5 % (0.3 s) error per line, calibrated on 135 cached Adam clips.
+- **A single line can be the problem.** A dub line cannot start before its master line, so one
+  line longer than its *own slot* (s09_05: 6.1 s forecast vs 5.3 s) overflows its segment even
+  when the segment as a whole has time. The forecast reports each line's own slot.
+- **Library edits re-render everything.** Adding `internals.py` changed the library fingerprint,
+  so Episode 01's renders went stale: its draft re-rendered and needed a fresh visual review
+  before its final render could run. Keep the shared library stable and put
+  production-specific helpers next to that production's scenes.
+- **Hand-made deliverables.** Chapters, topics, `timings/en.json`, the per-section narration
+  texts and the plan's file names were first made by hand. Since 2.1 the deliver stage
+  regenerates them (byte-identical to the hand-made ones) from `topic` fields and
+  `[deliver]` settings, so they can't go stale.
+

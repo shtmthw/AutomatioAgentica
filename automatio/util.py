@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from . import ROOT
-from .errors import MissingCapability, StageFailed
+from .errors import StageFailed
 from .secrets import redact, scrubbed_env
 
 
@@ -92,16 +92,35 @@ def tmp_path(path: Path) -> Path:
 
 
 def link_or_copy(src: Path, dst: Path) -> None:
-    """Hard-link src to dst (no extra disk space), falling back to a copy. Replaces dst atomically."""
+    """Hard-link src to dst (no extra disk space), falling back to a copy. Replaces dst atomically.
+
+    If dst already is src (the same inode, as after an earlier delivery), nothing happens: POSIX
+    rename() between two links of one file is a no-op that would leave the temp link behind."""
     src, dst = Path(src), Path(dst)
     dst.parent.mkdir(parents=True, exist_ok=True)
     tmp = dst.with_name(f".{dst.name}.link")
     tmp.unlink(missing_ok=True)
     try:
+        if dst.exists() and os.path.samefile(src, dst):
+            return
+    except OSError:
+        pass
+    try:
         os.link(src, tmp)
     except OSError:
         shutil.copy2(src, tmp)
     os.replace(tmp, dst)
+    tmp.unlink(missing_ok=True)
+
+
+def remove_stale_links(d: Path) -> int:
+    """Delete `.X.link` leftovers of older deliveries (see link_or_copy)."""
+    n = 0
+    for p in Path(d).rglob(".*.link"):
+        if p.is_file():
+            p.unlink()
+            n += 1
+    return n
 
 
 def rel(path) -> str:
@@ -125,17 +144,17 @@ def fmt_time(t: float) -> str:
     return f"{int(t // 60)}:{t % 60:04.1f}"
 
 
+def fmt_stamp(t: float) -> str:
+    """YouTube chapter timestamp: m:ss, or h:mm:ss from one hour (seconds are floored)."""
+    s = max(0, int(t + 1e-6))
+    h, s = divmod(s, 3600)
+    m, s = divmod(s, 60)
+    return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
+
+
 # ------------------------------------------------------------------ processes
 def which(name: str) -> str | None:
     return shutil.which(name)
-
-
-def need_tool(name: str) -> str:
-    p = which(name)
-    if not p:
-        raise MissingCapability(f"`{name}` is not installed or not on PATH.",
-                                remedy=f"Install {name} (e.g. `pacman -S ffmpeg` / `apt install ffmpeg`).")
-    return p
 
 
 _CHILDREN: set = set()

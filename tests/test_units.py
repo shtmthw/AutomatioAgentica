@@ -1,4 +1,5 @@
-"""Unit tests: narration/markers, subtitles, secrets, voice cache keys, retries, budget.
+"""Unit tests: narration/markers/topics, subtitles, secrets, voice cache keys, retries, budget,
+dub fitting and forecast, deliverables (links, chapters, topics, timings).
 
     .venv/bin/python -m unittest discover -s tests -v
 """
@@ -214,7 +215,7 @@ class TestVoice(unittest.TestCase):
 
     def test_budget_and_canary(self):
         from automatio import voice as V
-        from automatio.providers.base import Provider, Synthesis
+        from automatio.providers.base import Provider
 
         class Paid(Provider):
             name, paid, ext = "fakepaid", True, "wav"
@@ -333,6 +334,117 @@ class TestDubFit(unittest.TestCase):
         self.assertAlmostEqual(segs[0]["end"], 6.5 - st.min_gap)
         r = fit(self.master(), self.dub(2.6, 2.5, 2.4, 2.0), st)
         self.assertAlmostEqual({x["key"]: x for x in r["placements"]}["s01_03"]["onset"], 6.5)  # anchored line on time
+
+
+class TestNarrationMeta(unittest.TestCase):
+    def data(self):
+        return {"schema": N.SCHEMA, "title": "T", "source_language": "en", "sections": [
+            {"key": "s01", "chapter": {"number": "01", "title": "Intro"}, "lines": [
+                {"key": "s01_01", "en": "Hello there."}, {"key": "s01_02", "en": "Second line."}]}]}
+
+    def test_topics_never_change_the_content_fingerprint(self):
+        from automatio.util import file_fp
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "narration.json"
+            N.Narration(path, self.data()).save()
+            before = file_fp(path)
+            self.assertEqual(N.content_fingerprint(path), before)          # no topics: the plain file hash
+            data = self.data()
+            data["sections"][0]["lines"][1] = {"key": "s01_02", "topic": "The second idea", "en": "Second line."}
+            N.Narration(path, data).save()
+            self.assertNotEqual(file_fp(path), before)
+            self.assertEqual(N.content_fingerprint(path), before)          # ...but the same content
+            self.assertEqual(N.Narration(path, data).topics(), [("s01_02", "The second idea")])
+            data["sections"][0]["lines"][1]["en"] = "Changed line."
+            N.Narration(path, data).save()
+            self.assertNotEqual(N.content_fingerprint(path), before)       # real edits still count
+
+    def test_topic_validation(self):
+        data = self.data()
+        data["sections"][0]["lines"][0]["topic"] = "x" * 80
+        data["sections"][0]["lines"][1]["topic"] = 5
+        rep = N.validate(N.Narration(Path("x.json"), data), langs=["en"], subtitle_lang="en", source_lang="en")
+        self.assertTrue(any("topic must be" in e for e in rep["errors"]))
+        self.assertTrue(any("80 characters" in w for w in rep["warnings"]))
+
+
+class TestDeliverables(unittest.TestCase):
+    def test_link_or_copy_is_idempotent(self):
+        from automatio.util import link_or_copy, remove_stale_links
+        with tempfile.TemporaryDirectory() as d:
+            src, dst = Path(d) / "a.mp4", Path(d) / "out" / "final.mp4"
+            src.write_bytes(b"video")
+            link_or_copy(src, dst)
+            link_or_copy(src, dst)                     # dst is already src: no temp link may be left behind
+            self.assertEqual(sorted(p.name for p in dst.parent.iterdir()), ["final.mp4"])
+            self.assertEqual(dst.read_bytes(), b"video")
+            (dst.parent / ".final.mp4.link").write_bytes(b"old")    # leftover of an older delivery
+            self.assertEqual(remove_stale_links(Path(d)), 1)
+
+    def test_fmt_stamp(self):
+        from automatio.util import fmt_stamp
+        self.assertEqual([fmt_stamp(t) for t in (0, 9.99, 65.9, 3725.2)], ["0:00", "0:09", "1:05", "1:02:05"])
+
+    def _narr_tl(self):
+        data = {"schema": N.SCHEMA, "sections": [
+            {"key": "s01", "chapter": {"number": "01", "title": "Intro"},
+             "lines": [{"key": "s01_01", "en": "A."}, {"key": "s01_02", "topic": "The idea", "en": "B."}]},
+            {"key": "s02", "chapter": {"number": "02", "title": "Middle"}, "lines": [{"key": "s02_01", "en": "C."}]},
+            {"key": "s03", "chapter": {"number": "03", "title": "End"},
+             "lines": [{"key": "s03_01", "topic": "Recap", "en": "D."}]}]}
+        tl = {"total": 100.0, "scenes": [{"section": "s01", "offset": 0.0, "duration": 40.0},
+                                         {"section": "s02", "offset": 40.0, "duration": 55.0},
+                                         {"section": "s03", "offset": 95.0, "duration": 5.0}],
+              "lines": [{"key": "s01_01", "section": "s01", "start": 0.4, "speech_start": 0.5, "speech_end": 9.0},
+                        {"key": "s01_02", "section": "s01", "start": 21.7, "speech_start": 21.8, "speech_end": 30.0},
+                        {"key": "s02_01", "section": "s02", "start": 40.2, "speech_start": 40.3, "speech_end": 80.0},
+                        {"key": "s03_01", "section": "s03", "start": 95.1, "speech_start": 95.2, "speech_end": 98.0}]}
+        return N.Narration(Path("n.json"), data), tl
+
+    def test_chapters_topics_and_youtube_rules(self):
+        from automatio import deliver as D
+        narr, tl = self._narr_tl()
+        self.assertEqual(D.chapters_txt(narr, tl), "0:00 Intro\n0:40 Middle\n1:35 End\n")
+        self.assertEqual(D.topics_txt(narr, tl), "0:00 01. Intro\n  0:21 The idea\n0:40 02. Middle\n"
+                                                 "1:35 03. End\n  1:35 Recap\n")
+        _, issues = D.chapters(narr, tl)
+        self.assertTrue(any("'End' is 5.0s long" in i for i in issues))      # YouTube needs 10 s per chapter
+
+    def test_timings_slots(self):
+        from automatio import deliver as D
+        from automatio.config import DubSettings, Version
+        narr, tl = self._narr_tl()
+        prod = mock.Mock(slug="x", versions={"en": Version("en", "v", "english", "eng")}, dub_langs=[],
+                         dub=DubSettings())
+        t = D.timings(prod, narr, "en", tl)
+        rows = {r["key"]: r for r in t["lines"]}
+        self.assertEqual(rows["s01_01"]["slot_end"], 21.7)               # the next line of the section starts
+        self.assertEqual(rows["s01_02"]["slot_end"], 40.0)               # the section ends
+        self.assertEqual(rows["s01_02"]["topic"], "The idea")
+        self.assertEqual([s["title"] for s in t["sections"]], ["Intro", "Middle", "End"])
+
+
+class TestForecast(unittest.TestCase):
+    def test_features(self):
+        from automatio.forecast import features
+        self.assertEqual(features("Hello, world. Bye!"), [13.0, 2.0, 1.0, 3.0, 1.0])
+
+    def test_forecast_names_segments_that_cannot_fit(self):
+        from automatio import forecast as F
+        from automatio.config import DubSettings
+        master = TestDubFit().master()
+        # the model says: one second per letter
+        texts = {"s01_01": "abcd", "s01_02": "abcd", "s01_03": "abcd", "s02_01": "ab"}
+        jobs = [mock.Mock(key=k, cached=False, send=t) for k, t in texts.items()]
+        prod = mock.Mock(dub=DubSettings(min_gap=0.12))
+        with mock.patch("automatio.voice.plan", return_value=jobs), \
+                mock.patch.object(F, "model_for", return_value=F.DurationModel([1.0, 0, 0, 0, 0])):
+            f = F.dub_forecast(prod, mock.Mock(), "hi", master)
+        seg = {s["lines"][0]: s for s in f["segments"]}
+        self.assertEqual(seg["s01_01"]["status"], "overflow")           # 3 x 4 s in a ~9.2 s slot
+        self.assertEqual(seg["s01_01"]["unvoiced"], ["s01_01", "s01_02", "s01_03"])
+        self.assertEqual(seg["s02_01"]["status"], "fits")
+        self.assertEqual([s["section"] for s in f["at_risk"]], ["s01"])
 
 
 if __name__ == "__main__":

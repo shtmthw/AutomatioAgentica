@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import json
 import os
-import time
 from pathlib import Path
 
 from .errors import Locked
@@ -135,12 +134,3 @@ class RunLock:
             self.path.unlink(missing_ok=True)
         return False
 
-
-def wait_for_lock_release(build_dir: Path, timeout: float = 0.0) -> bool:
-    lock = RunLock(build_dir, "")
-    t0 = time.time()
-    while lock.holder():
-        if time.time() - t0 > timeout:
-            return False
-        time.sleep(1)
-    return True

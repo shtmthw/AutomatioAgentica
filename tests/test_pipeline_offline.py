@@ -64,6 +64,10 @@ draft = false
 
 [render]
 jobs = 2
+
+[deliver.aliases]
+"test_EN.mp4" = "english/final-video.mp4"
+"test_HI_voiceover.mp3" = "hindi/voiceover.mp3"
 """
 
 
@@ -118,6 +122,7 @@ class OfflinePipeline(unittest.TestCase):
         lines[0]["hi"] = "यह एक छोटा परीक्षण है। यह पूरी पाइपलाइन की जाँच करता है।"
         lines[1]["en"] = "Now the agent {wave}waves goodbye."
         lines[1]["hi"] = "अब Agent {wave}अलविदा कहता है।"
+        lines[1]["topic"] = "Waving goodbye"
         (prod / "narration.json").write_text(json.dumps(narr, ensure_ascii=False, indent=2), encoding="utf-8")
         self.aa("check", "translate", "offline-test", expect=0)
 
@@ -146,6 +151,18 @@ class OfflinePipeline(unittest.TestCase):
             self.assertTrue((d / "narration/lines/s01_02.wav").exists())
         self.assertFalse(man["subtitles"]["burned_in"])
         self.assertTrue((out / "report.md").exists())
+        # derived deliverables: chapters, topics (from `topic` fields), timings, script export, aliases
+        en_dir = out / "english"
+        self.assertEqual((en_dir / "chapters.txt").read_text(), "0:00 Hello\n")
+        self.assertIn("Waving goodbye", (en_dir / "topics.txt").read_text())
+        tim = json.loads((en_dir / "timings.json").read_text())
+        self.assertEqual([ln["key"] for ln in tim["lines"]], ["s01_01", "s01_02"])
+        self.assertEqual(tim["lines"][1]["topic"], "Waving goodbye")
+        self.assertTrue((out / "script/en/01_hello.txt").exists() and (out / "script/hi/01_hello.txt").exists())
+        self.assertIn("| s01_02 |", (out / "script/side-by-side.md").read_text())
+        self.assertEqual((out / "test_EN.mp4").stat().st_ino, (en_dir / "final-video.mp4").stat().st_ino)
+        self.assertFalse((out / "test_HI_voiceover.mp3").exists())          # no dub yet: reported, not faked
+        self.assertEqual(list(out.rglob(".*.link")), [])
 
         # 5. a second run is a no-op (everything fresh), and the protocol says done
         o = self.aa("run", "offline-test", expect=0)
@@ -155,13 +172,22 @@ class OfflinePipeline(unittest.TestCase):
         # 6. the Hindi version as a dub: voiced over the English picture and timeline
         toml = (prod / "production.toml").read_text(encoding="utf-8")
         toml = toml.replace('[versions.hi]\nvoice = "test-tone-hi"', '[versions.hi]\nvoice = "test-tone-hi"\nmode = "dub"\nfollow = "en"')
+        toml = toml.replace('formats = ["srt", "vtt"]\n', 'formats = ["srt", "vtt"]\nown_language = true\n', 1)
         self.assertIn('mode = "dub"', toml)
+        self.assertIn("own_language = true", toml)
         (prod / "production.toml").write_text(toml, encoding="utf-8")
         o = self.aa("run", "offline-test", expect=11)              # a changed configuration needs approval
         self.assertIn("dub over en", json.dumps(o["approval"]["config"]))
         self.aa("approve", "offline-test", "--by", "unit test", expect=0)
+        o = self.aa("run", "offline-test", "--lang", "en", expect=0)   # only some versions: a partial run
+        self.assertTrue(o.get("partial"))
+        self.assertEqual(o["not_produced"], ["hi"])
+        st = self.aa("status", "offline-test", expect=0)
+        self.assertEqual({r["stage"]: r["status"] for r in st["stages"]}["deliver"], "partial")
+        self.assertEqual(st["next"]["action"], "run")
         o = self.aa("run", "offline-test", expect=0)
         self.assertEqual(o["state"], "done", json.dumps(o, indent=1)[:3000])
+        self.assertFalse(o.get("partial"))
         man = json.loads((out / "manifest.json").read_text())
         en, hi = out / "english", out / "hindi"
         for f in ("final-video.mp4", "voiceover.mp3", "subtitles-en.srt", "narration/voice-track.flac"):
@@ -176,6 +202,33 @@ class OfflinePipeline(unittest.TestCase):
         ver = man["versions"]["hi"]["verification"]
         self.assertNotEqual(ver["status"], "fail", json.dumps(ver, indent=1))
         self.assertIn("dub fit", [c["check"] for c in ver["checks"]])
+        own = next(c for c in ver["checks"] if c["check"] == "subtitles (hi)")      # Hindi subtitles, dub-timed
+        self.assertNotEqual(own["status"], "fail", json.dumps(own, indent=1))
+        self.assertIn("अलविदा", (hi / "subtitles-hi.srt").read_text(encoding="utf-8"))
+        self.assertTrue((out / "test_HI_voiceover.mp3").exists())
+        tim = json.loads((hi / "timings.json").read_text())
+        self.assertEqual((tim["mode"], tim["follow"]), ("dub", "en"))
+
+        # 7. the dub forecast and a dub preview (cached clips, nothing paid)
+        o = self.aa("check", "dub", "offline-test", expect=0)
+        self.assertIn("hi", o["forecast"])
+        o = self.aa("preview", "offline-test", "s01", "--lang", "hi", expect=0)
+        self.assertTrue((ROOT / o["preview"]["video"]).exists() or Path(o["preview"]["video"]).exists())
+        self.assertEqual(o["preview"]["draft_voice"], [])
+
+    def test_new_with_dub(self):
+        (self.tmp / "in2").mkdir()
+        (self.tmp / "in2/script.md").write_text(SCRIPT, encoding="utf-8")
+        (self.tmp / "in2/plan.md").write_text(PLAN, encoding="utf-8")
+        self.aa("new", "dub-test", "--script", str(self.tmp / "in2/script.md"), "--plan", str(self.tmp / "in2/plan.md"),
+                "--dub", "hi", "--title", "Dub test", expect=0)
+        toml = (self.tmp / "productions/dub-test/production.toml").read_text(encoding="utf-8")
+        self.assertLess(toml.index("[versions.en]"), toml.index("[versions.hi]"))     # the master comes first
+        self.assertIn('mode = "dub"', toml)
+        self.assertIn('follow = "en"', toml)
+        self.assertIn("[dub]", toml)
+        import tomllib
+        self.assertEqual(tomllib.loads(toml)["versions"]["hi"]["voice"], "hindi-adam")
 
 
 if __name__ == "__main__":

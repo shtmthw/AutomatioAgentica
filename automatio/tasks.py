@@ -9,8 +9,6 @@ can perform these tasks; nothing here is specific to one harness.
 """
 from __future__ import annotations
 
-from pathlib import Path
-
 from .narration import display, markers_in
 from .plan import plan_section_text
 from .util import atomic_write_text, rel
@@ -30,7 +28,27 @@ def _write(prod, tid: str, title: str, body: str, *, check: str | None, summary:
             "check": check, "then": _cmd(prod, "run"), "items": items or []}
 
 
-def translate_task(prod, narr, report: dict) -> dict:
+def _dub_section(prod, narr, forecasts: dict | None) -> str:
+    """Translate-task guidance for dub languages: the time each line has on the master timeline."""
+    if not prod.dub_langs:
+        return ""
+    out = ["## Dub languages: write to fit", "",
+           f"{', '.join(prod.dub_langs)} {'is a dub' if len(prod.dub_langs) == 1 else 'are dubs'}: voiced over the "
+           "master's picture and timeline, never re-timed. Write each line **concise but complete** so it fits the "
+           "slot of its master line (sections and anchored steps must start on time). The house Hindi voice "
+           "speaks about 1.3x as long as the English voice on the same content. Each sentence end costs about "
+           "0.55 s and each comma about 0.4 s, so avoid needless commas. Dub lines need no cue markers.", ""]
+    for lang, f in (forecasts or {}).items():
+        out += [f"Forecast for {lang} ({f['model']}); `python -m automatio check dub {prod.slug}` shows it "
+                "again after every edit:", "", "| segment | slot | speech | forecast |", "|---|---|---|---|"]
+        out += [f"| {s['lines'][0]}..{s['lines'][-1]} | {s['window']:.1f}s | {s['need']:.1f}s | {s['status']} "
+                f"(x{s['speed']:.2f}, {s['slack']:+.1f}s) |"
+                for s in f["segments"] if s["status"] != "fits"] or ["| all segments | | | fit |"]
+        out.append("")
+    return "\n".join(out)
+
+
+def translate_task(prod, narr, report: dict, forecasts: dict | None = None) -> dict:
     src = prod.source_language
     targets = [l for l in dict.fromkeys([*prod.langs, prod.subtitles.language]) if l != src]
     missing = []
@@ -71,6 +89,7 @@ Targets:
 
 Context: the production plan `{rel(prod.plan)}`{''.join(f', notes `{rel(n)}`' for n in prod.notes)}.
 
+{_dub_section(prod, narr, forecasts)}
 ## Done when
 `{_cmd(prod, 'check', 'translate')}` reports no errors. Then run `{_cmd(prod, 'run')}`.
 
@@ -99,9 +118,6 @@ def scenes_task(prod, narr, report: dict, man: dict | None) -> dict:
         lines = []
         total = 0.0
         for ln in sec["lines"]:
-            dur = None
-            if man and ln["key"] in man.get("lines", {}):
-                dur = man["lines"][ln["key"]]["speech_end"]
             est = {l: (man["lines"][ln["key"]]["speech_end"] if man and l == man.get("lang") and ln["key"] in man["lines"]
                        else len(display(ln.get(l, ""))) / CPS.get(l, 13)) for l in prod.langs}
             total += max(est.values())
@@ -223,3 +239,38 @@ paragraph is genuinely not narration (a stage direction, a note) - list it under
 """
     return _write(prod, "narration", "bring the narration back in line with the script", body, check=None,
                   summary=f"script coverage {comp['coverage'] * 100:.1f}%", items=comp["missing"][:10])
+
+
+def dub_fit_task(prod, narr, lang: str, forecast: dict, bad: list) -> dict:
+    """Stop before paying: segments forecast not to fit their master slots even if every unvoiced
+    line comes out shorter than predicted."""
+    lines = {ln["key"]: ln for _, ln in narr.lines()}
+    blocks = []
+    for sg in bad:
+        rows = "\n".join(f"| {k} | {forecast['lines'][k]['seconds']:.1f}s"
+                         f"{'' if forecast['lines'][k]['measured'] else ' (forecast)'} | "
+                         f"{forecast['lines'][k]['slot']:.1f}s | {display(lines[k][lang])} |" for k in sg["lines"])
+        blocks.append(f"### {sg['section']}: {sg['lines'][0]}..{sg['lines'][-1]} - needs ~{sg['need']:.1f}s, "
+                      f"slot {sg['window']:.1f}s\n\n| line | speech | own slot | {lang} text |\n|---|---|---|---|\n"
+                      f"{rows}")
+    body = f"""
+The {LANG_NAMES.get(lang, lang)} dub of **{prod.title}** would not fit the {prod.versions[lang].follow} master's
+timeline: the segments below need more time than their slots, even at the maximum time-stretch
+({(prod.dub.max_speedup - 1) * 100:.0f}% faster) and even if every line not voiced yet came out 5% shorter than
+forecast ({forecast['model']}). Voicing them now would spend paid credits on lines that have to be rewritten
+and voiced again.
+
+A dub line cannot start before its master line, so a line longer than its **own slot** (from its master
+line's start to the next one) pushes the lines after it; the last line of a segment must fit its own slot.
+Rewrite the {lang} text of these lines in `{rel(narr.path)}` **shorter, keeping the full meaning** (never drop
+content): fewer filler words and commas, shorter synonyms, no repeated subject. Lines already voiced keep their
+measured length; shortening them makes them paid again, so prefer the forecast ones.
+
+Check: `{_cmd(prod, 'check', 'dub')}` (no errors left), then `{_cmd(prod, 'run')}`.
+
+{chr(10).join(blocks)}
+"""
+    return _write(prod, f"dub-fit-{lang}", f"shorten the {LANG_NAMES.get(lang, lang)} dub lines that cannot fit", body,
+                  check=_cmd(prod, "check", "dub"),
+                  summary=f"{len(bad)} {lang} segment(s) forecast not to fit their slots; shorten before voicing",
+                  items=[k for sg in bad for k in sg["lines"]])

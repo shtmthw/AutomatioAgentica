@@ -24,6 +24,19 @@ follow = "en"
 [subtitles]
 language = "en"
 formats = ["srt", "vtt"]
+own_language = true        # also hindi/subtitles-hi.srt/.vtt, timed to the Hindi voice-over (the plan's ep02_HI.srt)
+
+# The plan's deliverable names (VIDEO-PLAN-2, "Final expectations" 10 and 11), linked inside output/<slug>/.
+[deliver]
+script_dir = "narration"   # narration/en/ and narration/hi/: the narration text per section
+
+[deliver.aliases]
+"ep02_inside_the_agent_EN.mp4" = "english/final-video.mp4"
+"ep02_EN.srt" = "english/subtitles-en.srt"
+"ep02_voiceover_HI.mp3" = "hindi/voiceover.mp3"
+"ep02_HI.srt" = "hindi/subtitles-hi.srt"
+"timings/en.json" = "english/timings.json"
+"narration/en_hi_side_by_side.md" = "narration/side-by-side.md"
 
 # [video]   width, height, fps, quality, encoder ("libx264" | "copy"), crf, preset, audio_bitrate
 # [audio]   voice_lufs, music_lufs, duck_db, line_gap, limiter_db, music ("ambient" | "none")

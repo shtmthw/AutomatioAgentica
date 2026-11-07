@@ -1,15 +1,15 @@
 """Command line interface - the surface a harness drives.
 
     python -m automatio doctor [--online]              what this environment can do
-    python -m automatio new <slug> --script F --plan F  start a production from your files
+    python -m automatio new <slug> --script F --plan F [--dub hi]   start a production from your files
     python -m automatio status <slug>                   stage table, progress, approval
     python -m automatio next <slug>                     the single next action for the harness
-    python -m automatio run <slug> [--until S] [--only S] [--force S]
+    python -m automatio run <slug> [--until S] [--only S] [--force S] [--lang en]
     python -m automatio approve <slug> --budget elevenlabs=N [--by NAME]   (after the user approves)
     python -m automatio task <slug>                     print the waiting agent task
-    python -m automatio check translate|scenes|narration <slug>
+    python -m automatio check translate|scenes|narration|dub <slug>
     python -m automatio complete review <slug> --notes "..."
-    python -m automatio preview <slug> <section> [--lang hi] [--hq] [--audio]
+    python -m automatio preview <slug> <section>[,<section>] [--lang hi] [--hq] [--audio] [--paid]
     python -m automatio say "text" [--voice hindi-adam]
     python -m automatio report <slug> | estimate <slug> | voices | clean <slug>
 
@@ -32,7 +32,7 @@ from .secrets import redact
 from .util import atomic_write_text, now_iso, rel
 
 ICON = {"done": "✓", "skipped": "–", "failed": "✗", "running": "…", "waiting_agent": "◆", "waiting_approval": "?",
-        "pending": "·", "stale": "↻"}
+        "pending": "·", "stale": "↻", "partial": "◐", "interrupted": "‖"}
 
 
 def emit(obj: dict, as_json: bool, text: str | None = None) -> None:
@@ -73,12 +73,22 @@ notes = [{notes}]
 [subtitles]
 language = "en"
 formats = ["srt", "vtt"]
-
+# own_language = true     # also subtitles-<lang>.srt/.vtt in each version's own language (e.g. Hindi)
+{dub}
+# [deliver] aliases: plan-required file names, linked inside output/<slug>/, e.g.
+#   aliases = {{ "ep03_EN.mp4" = "english/final-video.mp4", "ep03_EN.srt" = "english/subtitles-en.srt" }}
 # [video]   width, height, fps, quality, encoder ("libx264" | "copy"), crf, preset, audio_bitrate
 # [audio]   voice_lufs, music_lufs, duck_db, line_gap, limiter_db, music ("ambient" | "none")
 # [review]  draft (free low-res draft before paid voices), visual_review (agent checks contact sheets)
 # [render]  jobs (parallel Manim processes), timeout
 # [pronunciation.hi]  production-specific respellings, e.g. "LLM" = "एल एल एम"
+'''
+DUB_TEMPLATE = '''
+# Dub: fitted onto the master's timeline (automatio/dub.py, defaults in config.DubSettings).
+# anchors = lines that must start together with their master line (numbered steps).
+[dub]
+max_speedup = 1.05
+anchors = []
 '''
 DEFAULT_VOICES = {"hi": "hindi-adam", "en": "english-andrew"}
 
@@ -94,6 +104,19 @@ def cmd_new(a):
     from .config import load_voices
     voices = load_voices()
     langs = [l.strip() for l in a.languages.split(",") if l.strip()]
+    dubs = {}
+    for spec in a.dub or []:
+        l, _, master = spec.partition(":")
+        dubs[l.strip()] = master.strip() or a.source_language
+    for l, m in dubs.items():
+        if l == m:
+            raise UsageError(f"--dub {l}: a dub needs another version as its master")
+        if m in dubs:
+            raise UsageError(f"--dub {l}:{m}: the master must be a full version, not a dub")
+        for x in (m, l):
+            if x not in langs:
+                langs.append(x)
+    langs = [m for m in langs if m not in dubs] + [l for l in langs if l in dubs]     # masters first
     chosen = {}
     for spec in a.voice or []:
         l, _, v = spec.partition("=")
@@ -128,10 +151,17 @@ def cmd_new(a):
         extra = ", ".join(str(x) for x in (pr.get("voice_name"), pr.get("model_id"), pr.get("rate")) if x)
         return f"{pr.provider} {ident}" + (f" ({extra})" if extra else "")
 
-    versions = "".join(f'[versions.{l}]\nvoice = "{chosen[l]}"   # {_voice_note(chosen[l])}\n\n' for l in langs)
+    def _version(l):
+        out = f'[versions.{l}]\nvoice = "{chosen[l]}"   # {_voice_note(chosen[l])}\n'
+        if l in dubs:
+            out += f'mode = "dub"          # voiced over the {dubs[l]} picture and timeline (not rendered)\nfollow = "{dubs[l]}"\n'
+        return out + "\n"
+
+    versions = "".join(_version(l) for l in langs)
     toml = TEMPLATE.format(title=json.dumps(a.title or a.slug.replace("-", " ").title(), ensure_ascii=False),
                            source=a.source_language, script=script, plan=plan,
-                           notes=", ".join(json.dumps(n) for n in notes), versions=versions)
+                           notes=", ".join(json.dumps(n) for n in notes), versions=versions,
+                           dub=DUB_TEMPLATE if dubs else "")
     if not (d / "production.toml").exists():          # --force replaces inputs, never a customised config
         atomic_write_text(d / "production.toml", toml)
     out = {"ok": True, "production": a.slug, "dir": rel(d), "files": [script, plan, *notes],
@@ -194,6 +224,8 @@ def _print_outcome(o, a) -> int:
     if o.error:
         if o.error.get("remedy"):
             lines.append(f"  remedy: {o.error['remedy']}")
+        if o.error.get("hint"):
+            lines.append(f"  hint: {o.error['hint']}")
         tail = o.error.get("details", {}).get("tail") or o.error.get("details", {}).get("traceback")
         if tail:
             lines += ["  | " + t for t in tail[-8:]]
@@ -207,7 +239,8 @@ def cmd_run(a):
     h = add_file(p.prod.build_dir / "logs" / f"run-{stamp}.log")
     try:
         log.info(f"run {p.prod.slug} (AutomatioAgentica {__version__})")
-        o = p.run(until=a.until, only=a.only, force=tuple(a.force or ()))
+        langs = [l.strip() for l in (a.lang or "").split(",") if l.strip()] or None
+        o = p.run(until=a.until, only=a.only, force=tuple(a.force or ()), langs=langs)
     finally:
         remove(h)
     return _print_outcome(o, a)
@@ -225,7 +258,6 @@ def _parse_budget(specs) -> dict:
 
 
 def cmd_approve(a):
-    from .util import fingerprint
     p = _pipeline(a)
     est = p.estimate()
     budget = _parse_budget(a.budget)
@@ -255,6 +287,36 @@ def cmd_task(a):
     return 0
 
 
+def _check_dub(p) -> dict:
+    """Forecast every dub against its master's timeline (see automatio/forecast.py)."""
+    from .forecast import dub_forecast
+    errors, warnings, out = [], [], {}
+    if not p.prod.dub_langs:
+        return {"errors": [], "warnings": ["this production has no dub version"], "forecast": {}}
+    for lang in p.prod.dub_langs:
+        tl = p.master_timeline(p.prod.versions[lang].follow)
+        if not tl:
+            warnings.append(f"{lang}: no draft or final render of the {p.prod.versions[lang].follow} master yet; "
+                            "run the pipeline until the draft is rendered")
+            continue
+        f = dub_forecast(p.prod, p.narr, lang, tl)
+        sure = dub_forecast(p.prod, p.narr, lang, tl, margin=-0.05)      # the voice stage's guard
+        out[lang] = {"model": f["model"], "summary": f["summary"], "segments": f["segments"]}
+        blocked = {tuple(s["lines"]) for s in sure["segments"] if s["status"] == "overflow" and s["unvoiced"]}
+        for sg in f["segments"]:
+            if sg["status"] == "fits":
+                continue
+            msg = (f"{lang} {sg['section']} {sg['lines'][0]}..{sg['lines'][-1]}: {sg['status']} - ~{sg['need']:.1f}s "
+                   f"of speech for a {sg['window']:.1f}s slot; "
+                   + (f"over by {sg['over_by']:.2f}s even at x{sg['speed']:.2f}" if sg.get("over_by")
+                      else f"fits at x{sg['speed']:.3f} with {sg['slack']:.2f}s to spare")
+                   + (f"; {len(sg['unvoiced'])} line(s) not voiced yet" if sg["unvoiced"] else "; all voiced"))
+            (errors if tuple(sg["lines"]) in blocked else warnings).append(msg)
+        warnings.append(f"{lang}: forecast {f['model']}; {len(f['at_risk'])} of {len(f['segments'])} segment(s) "
+                        "at risk")
+    return {"errors": errors, "warnings": warnings, "forecast": out}
+
+
 def cmd_check(a):
     from . import narration as N
     from .scenes import check as check_scenes
@@ -269,6 +331,8 @@ def cmd_check(a):
             if comp["coverage"] < 0.985 or comp["ratio"] < 0.97:
                 rep["errors"].append(f"narration covers {comp['coverage'] * 100:.1f}% of the script; missing: "
                                      f"{comp['missing'][:5]}")
+    elif a.what == "dub":
+        rep = _check_dub(p)
     else:
         rep = check_scenes(prod, p.narr)
         rep["scenes"] = {k: f"{rel(r.file)}:{r.cls}" for k, r in rep["scenes"].items()}
@@ -292,37 +356,64 @@ def cmd_complete(a):
     return 0
 
 
+def _preview_dub(p, a, lang: str, sections: list[str]) -> int:
+    from . import dub
+    from .state import RunLock
+    with RunLock(p.prod.build_dir, f"preview {p.prod.slug} {lang}"):
+        r = dub.preview(p.prod, p.narr, lang, sections, p.state, paid=a.paid)
+    sm = r["fit"]
+    lines = [f"{lang} dub preview of {', '.join(r['sections'])} ({r['from']:.1f}s - {r['to']:.1f}s of the "
+             f"{p.prod.versions[lang].follow} master)",
+             f"  video: {r['video']}", f"  voice: {r['voice']}",
+             f"  {r['paid_voice']} line(s) in the final voice, {len(r['draft_voice'])} in the free draft voice"
+             + (f": {r['draft_voice'][:8]}" if r["draft_voice"] else ""),
+             f"  fit: {sm['sped_up']} line(s) sped up (max x{sm['max_speed']:.3f}), max lag {sm['max_lag']:.2f}s, "
+             f"{len(sm['overflow'])} overflowing segment(s)"]
+    lines += [f"  ! does not fit: {o['lines']} (+{o['over_by']:.2f}s)" for o in sm["overflow"]]
+    if r["draft_voice"]:
+        lines.append("  (draft-voice lines only show the timing roughly; listen to the final-voice lines)")
+    emit({"ok": True, "preview": r}, a.json, "\n".join(lines))
+    return 0
+
+
 def cmd_preview(a):
     from . import render as R
     from . import voice as V
     from .scenes import check as check_scenes
+    from .util import link_or_copy, read_json, resolve
     p = _pipeline(a)
     prod, narr = p.prod, p.narr
-    sec = next((s for s in narr.sections if s["key"] == a.section), None)
-    if sec is None:
-        raise UsageError(f"no section {a.section!r}; sections: {[s['key'] for s in narr.sections]}")
+    keys = [k.strip() for k in a.section.split(",") if k.strip()]
+    order = [s["key"] for s in narr.sections]
+    bad = [k for k in keys if k not in order]
+    if bad or not keys:
+        raise UsageError(f"no section {', '.join(bad) or a.section!r}; sections: {order}")
+    if a.lang and a.lang != "all" and a.lang not in prod.versions:
+        raise UsageError(f"--lang {a.lang}: not a version of this production ({', '.join(prod.langs)})")
+    if a.lang in prod.dub_langs:                     # a dub is heard over the master's picture
+        return _preview_dub(p, a, a.lang, keys)
     chk = check_scenes(prod, narr)
-    if sec["key"] not in chk["scenes"]:
-        raise ValidationFailed(f"no valid scene for {sec['key']}: " + "; ".join(e for e in chk["errors"] if sec["key"] in e))
     langs = prod.full_langs if a.lang in (None, "all") else [a.lang]   # dub versions are not rendered
     kind = "final" if a.hq else "draft"
     out = []
-    for lang in langs:
-        V.run_language(prod, narr, lang, p.state, draft=True)
-        man_path = V.manifest_path(prod, lang, draft=True)
-        r = R.render_one(prod, lang, sec, chk["scenes"][sec["key"]], man_path, kind=kind, preview_audio=a.audio)
-        from .util import read_json, resolve
-        d = prod.build_dir / "preview" / lang
-        d.mkdir(parents=True, exist_ok=True)
-        from .util import link_or_copy
-        mp4 = d / f"{sec['key']}.mp4"
-        link_or_copy(resolve(r["mp4"]), mp4)
-        sheet = R.contact_sheet(mp4, read_json(resolve(r["cues"])), read_json(man_path), d / f"{sec['key']}_sheet.jpg")
-        out.append({"lang": lang, "video": rel(mp4), "sheet": rel(sheet), "duration": r["duration"],
-                    "cached": r["cached"], "lint": r["lint"]})
+    for key in keys:
+        sec = narr.section(key)
+        if key not in chk["scenes"]:
+            raise ValidationFailed(f"no valid scene for {key}: " + "; ".join(e for e in chk["errors"] if key in e))
+        for lang in langs:
+            V.run_language(prod, narr, lang, p.state, draft=True)
+            man_path = V.manifest_path(prod, lang, draft=True)
+            r = R.render_one(prod, lang, sec, chk["scenes"][key], man_path, kind=kind, preview_audio=a.audio)
+            d = prod.build_dir / "preview" / lang
+            d.mkdir(parents=True, exist_ok=True)
+            mp4 = d / f"{key}.mp4"
+            link_or_copy(resolve(r["mp4"]), mp4)
+            sheet = R.contact_sheet(mp4, read_json(resolve(r["cues"])), read_json(man_path), d / f"{key}_sheet.jpg")
+            out.append({"section": key, "lang": lang, "video": rel(mp4), "sheet": rel(sheet),
+                        "duration": r["duration"], "cached": r["cached"], "lint": r["lint"]})
     lines = []
     for o in out:
-        lines.append(f"{sec['key']} [{o['lang']}] {o['duration']:.1f}s  sheet: {o['sheet']}  video: {o['video']}"
+        lines.append(f"{o['section']} [{o['lang']}] {o['duration']:.1f}s  sheet: {o['sheet']}  video: {o['video']}"
                      + (" (cached)" if o["cached"] else ""))
         lines += [f"  ! {x['line']} t={x['t']}: {x['issue']} {x['mobject']} {x['texts']}" for x in o["lint"]]
     emit({"ok": True, "previews": out}, a.json, "\n".join(lines))
@@ -427,6 +518,9 @@ def build_parser():
     s.add_argument("--source-language", default="en")
     s.add_argument("--languages", default="hi,en", help="versions to produce (default hi,en)")
     s.add_argument("--voice", action="append", help="lang=profile (default hi=hindi-adam, en=english-andrew)")
+    s.add_argument("--dub", action="append", metavar="LANG[:MASTER]",
+                   help="make LANG a dub over MASTER's picture and timeline (default master: the source language), "
+                        "e.g. --dub hi for one English video plus a Hindi voice-over")
     s.add_argument("--force", action="store_true")
     s.set_defaults(fn=cmd_new)
 
@@ -444,6 +538,8 @@ def build_parser():
     s.add_argument("--until", help="stop after this stage")
     s.add_argument("--only", help="run just this stage")
     s.add_argument("--force", action="append", help="redo a stage even if it is up to date (repeatable)")
+    s.add_argument("--lang", help="produce only these versions (comma-separated; voice -> deliver), e.g. while "
+                                  "another version is blocked; the masters of selected dubs are included")
     s.set_defaults(fn=cmd_run)
 
     s = sub.add_parser("approve", parents=[common], help="record the user's approval (only after they approve)")
@@ -454,7 +550,7 @@ def build_parser():
     s.set_defaults(fn=cmd_approve)
 
     s = sub.add_parser("check", parents=[common], help="validate agent work without running the pipeline")
-    s.add_argument("what", choices=["translate", "scenes", "narration"])
+    s.add_argument("what", choices=["translate", "scenes", "narration", "dub"])
     s.add_argument("production", nargs="?")
     s.set_defaults(fn=cmd_check)
 
@@ -464,12 +560,15 @@ def build_parser():
     s.add_argument("--notes", required=True)
     s.set_defaults(fn=cmd_complete)
 
-    s = sub.add_parser("preview", parents=[common], help="quick render + contact sheet of one section")
+    s = sub.add_parser("preview", parents=[common], help="quick render + contact sheet of sections, or a dub preview")
     s.add_argument("production")
-    s.add_argument("section")
-    s.add_argument("--lang", default=None, help="hi / en / all (default all)")
+    s.add_argument("section", help="section key(s), comma-separated (a dub preview spans first to last)")
+    s.add_argument("--lang", default=None, help="hi / en / all (default: every rendered version); a dub language "
+                                                "previews the dub over the master's final picture")
     s.add_argument("--hq", action="store_true", help="final resolution instead of 480p")
     s.add_argument("--audio", action="store_true", help="embed the narration in the preview video")
+    s.add_argument("--paid", action="store_true", help="dub preview: voice uncached lines with the paid voice "
+                                                       "(within the approved budget) instead of the draft voice")
     s.set_defaults(fn=cmd_preview)
 
     s = sub.add_parser("say", parents=[common], help="hear text in a voice (writes output/samples/)")

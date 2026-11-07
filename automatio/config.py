@@ -124,6 +124,16 @@ class SubtitleSettings:
     tail: float = 0.35
     min_duration: float = 0.9
     max_cps: float = 22.0       # reading speed warning threshold (characters per second)
+    own_language: bool = False  # also subtitles-<lang>.srt/.vtt in each version's own language, timed to its voice
+
+
+@dataclass
+class DeliverSettings:
+    """Extra deliverables (all derived from the pipeline's own outputs, never hand-made)."""
+    chapters: bool = True       # <label>/chapters.txt (YouTube chapters) and topics.txt (line `topic` fields)
+    script: bool = True         # <script_dir>/<lang>/NN_<title>.txt per section + <script_dir>/side-by-side.md
+    script_dir: str = "script"  # folder of the script export inside output/<slug>/
+    aliases: dict = field(default_factory=dict)   # "plan_name.mp4" = "english/final-video.mp4" (links)
 
 
 @dataclass
@@ -162,6 +172,7 @@ class Production:
     raw: dict
     voices: dict = field(default_factory=dict)
     dub: DubSettings = field(default_factory=DubSettings)
+    deliver: DeliverSettings = field(default_factory=DeliverSettings)
 
     @property
     def build_dir(self) -> Path:
@@ -189,6 +200,18 @@ class Production:
     def marker_langs(self) -> list[str]:
         """Languages whose narration must carry the cue markers (the ones scenes are timed to)."""
         return list(dict.fromkeys([self.source_language, *self.full_langs]))
+
+    def own_subtitle_langs(self) -> list[str]:
+        """Versions that also get subtitles in their own language ([subtitles] own_language)."""
+        if not self.subtitles.own_language:
+            return []
+        return [l for l in self.langs if l != self.subtitles.language]
+
+    def with_masters(self, langs) -> list[str]:
+        """`langs` plus the master of every dub among them, in production order."""
+        want = set(langs)
+        want |= {self.versions[l].follow for l in langs if self.versions[l].mode == "dub"}
+        return [l for l in self.langs if l in want]
 
     def profile(self, lang: str, draft: bool = False) -> VoiceProfile:
         v = self.versions[lang]
@@ -300,9 +323,20 @@ def load_production(arg: str | None = None) -> Production:
         render=_section(RenderSettings, raw.get("render", {}), "render"),
         pronunciation=raw.get("pronunciation", {}),
         budget=raw.get("budget", {}), raw=raw, voices=voices,
-        dub=_section(DubSettings, raw.get("dub", {}), "dub"))
+        dub=_section(DubSettings, raw.get("dub", {}), "dub"),
+        deliver=_section(DeliverSettings, raw.get("deliver", {}), "deliver"))
     if prod.video.encoder not in ("libx264", "copy"):
         raise ConfigError(f"{path}: [video] encoder must be 'libx264' or 'copy'")
+    labels = {v.label for v in prod.versions.values()}
+    sd = Path(prod.deliver.script_dir)
+    if sd.is_absolute() or ".." in sd.parts or len(sd.parts) != 1 or sd.name in labels:
+        raise ConfigError(f"{path}: [deliver] script_dir must be one folder name inside output/<slug>/ that is "
+                          f"not a version folder ({', '.join(sorted(labels))})")
+    for name, target in prod.deliver.aliases.items():
+        if not isinstance(target, str) or Path(name).is_absolute() or ".." in Path(name).parts \
+                or Path(target).is_absolute() or ".." in Path(target).parts:
+            raise ConfigError(f"{path}: [deliver] aliases: {name!r} = {target!r} must map a relative file name to a "
+                              "relative path inside output/<slug>/")
     for lang in prod.langs:
         prod.profile(lang, draft=True)   # validates draft references
     return prod

@@ -8,9 +8,11 @@ any fail stops delivery.
   subtitles      SRT and VTT parse, agree, and have no overlaps / order / bounds problems
   subtitle text  the cues contain the whole subtitle-language script, in order
   sync           narration energy is covered by subtitles and every cue has narration under it
+  subtitles (xx) [subtitles] own_language: the version's own-language files parse, agree, cover its
+                 whole script in order and sit over its own speech
   no burn-in     the encode used no subtitle filter, and the subtitle band of sampled frames is clear
   layout         layout warnings reported by the scenes while rendering
-  timing         actual section lengths vs the production plan (informational)
+  timing         actual section lengths vs the production plan (informational; names sections >20% off)
 """
 from __future__ import annotations
 
@@ -47,7 +49,34 @@ def _band_frames(path, times, w, h, y0, y1) -> list[float]:
     return out
 
 
-def verify(prod, narr, lang: str, asm: dict, sub_files: dict, man: dict) -> dict:
+def _own_subtitles(prod, narr, lang: str, files: dict, duration: float, act, fr) -> dict:
+    parsed = {fmt: subs.parse(resolve(p)) for fmt, p in files.items()}
+    base = next(iter(parsed.values()))
+    agree = all(len(c) == len(base) and all(abs(x[0] - y[0]) < 0.002 and abs(x[1] - y[1]) < 0.002 and x[2] == y[2]
+                                            for x, y in zip(c, base)) for c in parsed.values())
+    issues = subs.check(base, duration, prod.subtitles)
+    fails = [i for i in issues if i["level"] == "fail"]
+    expect = " ".join(display(ln[lang]) for _, ln in narr.lines()).split()
+    shown = " ".join(t for _, _, t in base).split()
+    covered = np.zeros(len(act), bool)
+    for a, b, _ in base:
+        covered[int(a / fr): max(int(a / fr) + 1, int(b / fr))] = True
+    cov = float((act & covered).sum() / max(1, int(act.sum())))
+    problems = []
+    if not agree:
+        problems.append("formats differ")
+    if fails:
+        problems.append(f"{len(fails)} error(s): {fails[0]['issue']} (cue {fails[0]['cue']})")
+    if expect != shown:
+        problems.append(f"cue text differs from the {lang} script ({len(shown)} vs {len(expect)} words)")
+    status = "fail" if problems else ("warn" if cov < 0.9 or len(issues) > len(fails) else "pass")
+    detail = "; ".join(problems) or (f"{len(base)} {lang} cues in {', '.join(parsed)}; complete {lang} script in "
+                                     f"order; {cov * 100:.1f}% of the {lang} speech under a cue"
+                                     + (f"; {len(issues)} warning(s)" if issues else ""))
+    return _c(f"subtitles ({lang})", status, detail, speech_coverage=round(cov, 4), issues=issues[:20])
+
+
+def verify(prod, narr, lang: str, asm: dict, sub_files: dict, man: dict, own_files: dict | None = None) -> dict:
     checks = []
     v = prod.video
     final = resolve(asm["final"])
@@ -153,6 +182,8 @@ def verify(prod, narr, lang: str, asm: dict, sub_files: dict, man: dict) -> dict
     checks.append(_c("sync", "pass" if ok else ("warn" if cov >= 0.9 else "fail"),
                      f"{cov * 100:.1f}% of narration is under a subtitle; {empty_cues} cue(s) without narration",
                      speech_coverage=round(cov, 4), silent_cues=empty_cues))
+    if own_files:
+        checks.append(_own_subtitles(prod, narr, lang, own_files, fdur, act, fr))
 
     # ---- burned-in subtitles
     enc = asm.get("encode", {})
@@ -188,8 +219,10 @@ def verify(prod, narr, lang: str, asm: dict, sub_files: dict, man: dict) -> dict
         rows.append({"section": s["section"], "actual": round(s["duration"], 1),
                      "planned": p.target if p else None})
     planned = sum(r["planned"] for r in rows if r["planned"])
-    checks.append(_c("timing", "info", f"total {fdur / 60:.1f} min" + (f" (plan: {planned / 60:.1f} min)" if planned else ""),
-                     sections=rows))
+    off = [f"{r['section']} {r['actual']:.0f}s vs {r['planned']:.0f}s ({(r['actual'] / r['planned'] - 1) * 100:+.0f}%)"
+           for r in rows if r["planned"] and abs(r["actual"] / r["planned"] - 1) > 0.2]
+    checks.append(_c("timing", "info", f"total {fdur / 60:.1f} min" + (f" (plan: {planned / 60:.1f} min)" if planned else "")
+                     + (f"; more than 20% off the plan: {', '.join(off)}" if off else ""), sections=rows))
 
     worst = "fail" if any(c["status"] == "fail" for c in checks) else (
         "warn" if any(c["status"] == "warn" for c in checks) else "pass")
