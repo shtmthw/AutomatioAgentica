@@ -1,0 +1,811 @@
+{
+  "schema": "automatio.narration/1",
+  "title": "Inside an AI Agent: Who Actually Runs the Loop?",
+  "source_language": "en",
+  "sections": [
+    {
+      "key": "s01",
+      "chapter": {
+        "number": "01",
+        "title": "Who Runs the Loop?"
+      },
+      "plan_section": "01",
+      "lines": [
+        {
+          "key": "s01_01",
+          "en": "In the last lesson, we learned what an AI agent is, and we saw its {heart}heart: the {loop}agent loop.",
+          "hi": "पिछले lesson में हमने जाना कि AI Agent क्या है, और उसका दिल देखा: Agent Loop।"
+        },
+        {
+          "key": "s01_02",
+          "en": "An agent receives a {goal}goal. It {decides}decides what to do next, and {acts}acts using tools.",
+          "hi": "Agent को एक goal मिलता है। वह अगला कदम तय करता है और tools से काम करता है।"
+        },
+        {
+          "key": "s01_03",
+          "en": "Then it {observes}observes the result, and {evaluates}evaluates: is the goal reached yet?",
+          "hi": "फिर वह result देखता है और जाँचता है: क्या goal पूरा हुआ?"
+        },
+        {
+          "key": "s01_04",
+          "en": "If not, it {repeats}repeats the loop, {again}again and again, until the job is done.",
+          "hi": "अगर नहीं, तो वह loop बार-बार दोहराता है, जब तक काम पूरा न हो।"
+        },
+        {
+          "key": "s01_05",
+          "en": "Along the way, we said things like: the agent {reads}reads files, and the agent {runs}runs commands.",
+          "hi": "साथ ही हमने कहा था: agent files पढ़ता है और commands चलाता है।"
+        },
+        {
+          "key": "s01_06",
+          "en": "But we also learned something else in that lesson. An {model}AI model {only}only produces text.",
+          "hi": "पर उसी lesson में हमने एक और बात सीखी। AI Model सिर्फ़ text बनाता है।"
+        },
+        {
+          "key": "s01_07",
+          "en": "So let's {zoom}zoom in on the model. Say it needs to {read}read a file.",
+          "hi": "तो Model पर zoom करते हैं। मान लो उसे file पढ़नी है।"
+        },
+        {
+          "key": "s01_08",
+          "en": "It can write the words {words}\"read the file\". But words alone {cant}can't open anything.",
+          "hi": "वह \"read the file\" लिख सकता है। पर सिर्फ़ शब्द कुछ नहीं खोल सकते।",
+          "spoken": {
+            "hi": "वह रीड द फ़ाइल लिख सकता है। पर सिर्फ़ शब्द कुछ नहीं खोल सकते।"
+          }
+        },
+        {
+          "key": "s01_09",
+          "en": "A model only produces text. So {who}who opens the file? {cmd}Who runs the command?",
+          "hi": "Model सिर्फ़ text बनाता है। तो file कौन खोलता है? Command कौन चलाता है?"
+        },
+        {
+          "key": "s01_10",
+          "en": "That's our question for today. We're going to {open}open up the agent and look {inside}inside.",
+          "hi": "यही आज का सवाल है। आज हम agent को खोलकर अंदर देखेंगे।"
+        }
+      ]
+    },
+    {
+      "key": "s02",
+      "chapter": {
+        "number": "02",
+        "title": "The Model Only Produces Text"
+      },
+      "plan_section": "02",
+      "lines": [
+        {
+          "key": "s02_01",
+          "en": "Let's start with two simple {facts}facts about the model.",
+          "hi": "पहले, Model के दो simple facts।"
+        },
+        {
+          "key": "s02_02",
+          "en": "Fact one: {inout}text in, text out. {send}You send the model some text, and it {back}sends back new text.",
+          "hi": "Fact one: text in, text out। आप Model को text भेजते हैं, और वह नया text लौटाता है।"
+        },
+        {
+          "key": "s02_03",
+          "en": "One {trip}round trip like this is called a {call}call.",
+          "hi": "ऐसे एक round trip को call कहते हैं।"
+        },
+        {
+          "key": "s02_04",
+          "en": "That's all a model can do. It has no {hands}hands, no {eyes}eyes, and no {connection}connection to your computer.",
+          "hi": "Model बस इतना ही करता है। न हाथ, न आँखें, न आपके computer से connection।"
+        },
+        {
+          "key": "s02_05",
+          "en": "{files}Files, the {terminal}terminal, the {internet}internet: they're all on the other side of a {wall}wall. The model {cant}can't reach any of them.",
+          "hi": "Files, terminal, internet, सब दीवार के उस पार हैं। Model इनमें से किसी तक नहीं पहुँचता।"
+        },
+        {
+          "key": "s02_06",
+          "en": "Fact two: the model doesn't {remember}remember anything by itself.",
+          "hi": "Fact two: Model ख़ुद कुछ याद नहीं रखता।"
+        },
+        {
+          "key": "s02_07",
+          "en": "Let's test it. In the {first}first call, we send: {msg}My name is Rahul.",
+          "hi": "चलो test करें। पहली call में भेजते हैं: My name is Rahul."
+        },
+        {
+          "key": "s02_08",
+          "en": "The model replies: {reply}Hello, Rahul!",
+          "hi": "Model कहता है: Hello, Rahul!"
+        },
+        {
+          "key": "s02_09",
+          "en": "Then that call {ends}ends, and the model {keeps}keeps nothing. It starts {fresh}fresh, like a blank page.",
+          "hi": "Call ख़त्म होती है और Model कुछ नहीं रखता। वह खाली पन्ने जैसा फिर शुरू होता है।"
+        },
+        {
+          "key": "s02_10",
+          "en": "Now we make a {second}second call, completely separate. We ask: {msg}What is my name?",
+          "hi": "अब दूसरी, बिल्कुल अलग call। पूछते हैं: What is my name?"
+        },
+        {
+          "key": "s02_11",
+          "en": "And the model says: {reply}I don't know.",
+          "hi": "Model कहता है: I don't know."
+        },
+        {
+          "key": "s02_12",
+          "en": "Each call is {independent}independent. The model only knows what's in the text it receives {now}right now.",
+          "hi": "हर call अलग है। Model सिर्फ़ वही जानता है जो text उसे अभी मिला है।"
+        },
+        {
+          "key": "s02_13",
+          "en": "Unless someone gives it the {earlier}earlier conversation again, it has no idea what happened {before}before.",
+          "hi": "जब तक कोई पिछली बातचीत फिर से न दे, उसे पता नहीं कि पहले क्या हुआ।"
+        },
+        {
+          "key": "s02_14",
+          "en": "But wait. When you chat with {chatgpt}ChatGPT or Claude, they do {remember}remember what you said earlier.",
+          "hi": "पर रुकिए। ChatGPT या Claude से chat करें, तो वे पिछली बातें याद रखते हैं।"
+        },
+        {
+          "key": "s02_15",
+          "en": "So how does that {work}work?",
+          "hi": "तो यह होता कैसे है?"
+        }
+      ]
+    },
+    {
+      "key": "s03",
+      "chapter": {
+        "number": "03",
+        "title": "Meet the Harness"
+      },
+      "plan_section": "03",
+      "lines": [
+        {
+          "key": "s03_01",
+          "en": "The answer is the {harness}harness.",
+          "hi": "जवाब है harness।"
+        },
+        {
+          "key": "s03_02",
+          "en": "A harness is the {ordinary}ordinary program built around the model. It {runs}runs the agent loop, {talks}talks to the model, and actually {performs}performs the actions.",
+          "hi": "Harness, model के चारों ओर बना एक साधारण program है। यह agent loop चलाता है, model से बात करता है और असल में actions करता है।"
+        },
+        {
+          "key": "s03_03",
+          "en": "Here's a simple way to {picture}picture it.",
+          "hi": "इसे ऐसे समझिए।"
+        },
+        {
+          "key": "s03_04",
+          "en": "Imagine a {decision}decision-maker in a {closed}closed room. There are no doors, only a small {slot}slot for passing paper.",
+          "hi": "सोचिए, बंद कमरे में एक decision-maker है। दरवाज़ा नहीं, बस काग़ज़ के लिए एक छोटा slot।"
+        },
+        {
+          "key": "s03_05",
+          "en": "Outside the room sits an {assistant}assistant. The assistant slides in a {note}note with the full situation so far.",
+          "hi": "कमरे के बाहर एक assistant है। वह अब तक की पूरी स्थिति का note अंदर सरकाता है।"
+        },
+        {
+          "key": "s03_06",
+          "en": "The decision-maker {reads}reads it and writes back: {open}Open the file named config.txt and tell me what it says.",
+          "hi": "Decision-maker उसे पढ़कर लिखता है: config.txt नाम की file खोलो और बताओ उसमें क्या लिखा है।"
+        },
+        {
+          "key": "s03_07",
+          "en": "The assistant {opens}opens the file, writes down what it says, and slides the whole {updated}updated note back in.",
+          "hi": "Assistant file खोलकर उसकी बात लिख लेता है, और पूरा updated note वापस अंदर सरकाता है।"
+        },
+        {
+          "key": "s03_08",
+          "en": "The decision-maker is the {model}model. The assistant is the {harness}harness. And the file? That's a {tool}tool.",
+          "hi": "Decision-maker है model। Assistant है harness। और file? वह है एक tool।"
+        },
+        {
+          "key": "s03_09",
+          "en": "So what does the harness do? It {stores}stores the conversation, and {sends}sends it to the model.",
+          "hi": "तो harness क्या करता है? वह बातचीत store करता है और model को भेजता है।"
+        },
+        {
+          "key": "s03_10",
+          "en": "It {reads}reads the model's reply, {executes}executes the tools the model asks for, and sends the {results}results back.",
+          "hi": "वह model का जवाब पढ़ता है, माँगे गए tools चलाता है, और results वापस भेजता है।"
+        },
+        {
+          "key": "s03_11",
+          "en": "It {decides}decides when to stop. And it {enforces}enforces permissions and limits.",
+          "hi": "वह तय करता है कि कब रुकना है। और permissions व limits लागू करता है।"
+        },
+        {
+          "key": "s03_12",
+          "en": "The model {decides}decides. The harness {does}does the work.",
+          "hi": "Model फ़ैसला लेता है। Harness काम करता है।"
+        },
+        {
+          "key": "s03_13",
+          "en": "So when we say {agent}AI agent, we really mean the {model}model, the {harness}harness and the {tools}tools, working together.",
+          "hi": "जब हम AI agent कहते हैं, तो मतलब है model, harness और tools, मिलकर काम करते हुए।"
+        },
+        {
+          "key": "s03_14",
+          "en": "That's why, as we said {last}last time, a model on its own is {not}not an agent.",
+          "hi": "इसीलिए, जैसा पिछली बार कहा था, अकेला model agent नहीं है।"
+        }
+      ]
+    },
+    {
+      "key": "s04",
+      "chapter": {
+        "number": "04",
+        "title": "The Conversation Is a List of Messages"
+      },
+      "plan_section": "04",
+      "lines": [
+        {
+          "key": "s04_01",
+          "en": "So how does the harness make the model {remember}remember? With a {list}list of messages.",
+          "hi": "तो harness model को याद कैसे करवाता है? Messages की एक list से।"
+        },
+        {
+          "key": "s04_02",
+          "en": "The harness {stores}stores the whole conversation as a list. Each item in the list is a {message}message, and every message has a {role}role.",
+          "hi": "Harness पूरी बातचीत एक list में रखता है। List का हर item एक message है और हर message का एक role होता है।"
+        },
+        {
+          "key": "s04_03",
+          "en": "The first role is {system}system. These are {instructions}instructions from the developer that set the agent's {rules}behaviour and rules.",
+          "hi": "पहला role है system। ये developer के निर्देश हैं, जो agent का बर्ताव और नियम तय करते हैं।"
+        },
+        {
+          "key": "s04_04",
+          "en": "For example: {example}You are a helpful coding agent. Ask before deleting any file.",
+          "hi": "जैसे: You are a helpful coding agent. Ask before deleting any file."
+        },
+        {
+          "key": "s04_05",
+          "en": "This message is often called the {prompt}system prompt.",
+          "hi": "इसे अक्सर system prompt कहते हैं।"
+        },
+        {
+          "key": "s04_06",
+          "en": "The second role is {user}user. That's what the person asks. For example: {example}My name is Rahul.",
+          "hi": "दूसरा role है user। यानी जो इंसान पूछता है। जैसे: My name is Rahul."
+        },
+        {
+          "key": "s04_07",
+          "en": "The third role is {assistant}assistant. That's what the model replies. For example: {example}Hello, Rahul!",
+          "hi": "तीसरा role है assistant। यानी model का जवाब। जैसे: Hello, Rahul!"
+        },
+        {
+          "key": "s04_08",
+          "en": "And the fourth role is {tool}tool: results that come back from tools. We'll see these in action {soon}soon.",
+          "hi": "चौथा role है tool: tools से आए results। इन्हें हम जल्द काम करते देखेंगे।"
+        },
+        {
+          "key": "s04_09",
+          "en": "Now let's {replay}replay our memory test, the right way.",
+          "hi": "अब memory test, सही तरीक़े से।"
+        },
+        {
+          "key": "s04_10",
+          "en": "The list holds the {system}system message, {name}My name is Rahul, {hello}Hello Rahul, and the new question: {question}What is my name?",
+          "hi": "List में है system message, My name is Rahul, Hello Rahul, और नया सवाल: What is my name?"
+        },
+        {
+          "key": "s04_11",
+          "en": "This time, the harness sends the {entire}entire list to the model, as one {bundle}bundle.",
+          "hi": "इस बार harness पूरी list को एक bundle बनाकर model को भेजता है।"
+        },
+        {
+          "key": "s04_12",
+          "en": "And the model replies: {reply}Your name is Rahul.",
+          "hi": "और model कहता है: Your name is Rahul."
+        },
+        {
+          "key": "s04_13",
+          "en": "The harness {adds}adds this reply to the bottom of the list, as a new {assistant}assistant message.",
+          "hi": "Harness यह जवाब list के नीचे नए assistant message की तरह जोड़ता है।"
+        },
+        {
+          "key": "s04_14",
+          "en": "Here's the {key}key idea. On every single call, the harness sends the {whole}whole conversation to the model again.",
+          "hi": "यही असली बात है। हर एक call पर, harness पूरी बातचीत model को फिर से भेजता है।"
+        },
+        {
+          "key": "s04_15",
+          "en": "That's how the model seems to {remember}remember. The {memory}memory lives in the {harness}harness, not in the model.",
+          "hi": "इसी से लगता है कि model याद रखता है। Memory harness में रहती है, model में नहीं।"
+        },
+        {
+          "key": "s04_16",
+          "en": "And notice: with every call, the bundle gets a little {bigger}bigger. Call {one}one, call {two}two, call {three}three.",
+          "hi": "ग़ौर कीजिए: हर call पर bundle थोड़ा बड़ा होता है। Call one, call two, call three."
+        },
+        {
+          "key": "s04_17",
+          "en": "Keep that in {mind}mind.",
+          "hi": "इसे याद रखिए।"
+        }
+      ]
+    },
+    {
+      "key": "s05",
+      "chapter": {
+        "number": "05",
+        "title": "How the Model Learns About Tools"
+      },
+      "plan_section": "05",
+      "lines": [
+        {
+          "key": "s05_01",
+          "en": "But there's another {puzzle}puzzle. The model can't {see}see the computer. So how does it know which {tools}tools exist?",
+          "hi": "एक और पहेली है। Model computer नहीं देख सकता। तो उसे कैसे पता कि कौन-से tools हैं?"
+        },
+        {
+          "key": "s05_02",
+          "en": "The answer: the harness {tells}tells it. Along with the messages, it sends a short {description}description of every available tool.",
+          "hi": "जवाब: harness बताता है। Messages के साथ वह हर उपलब्ध tool का छोटा description भेजता है।"
+        },
+        {
+          "key": "s05_03",
+          "en": "A tool description has three {parts}parts. First, a {name}name: {value}read_file.",
+          "hi": "Tool description के तीन हिस्से हैं। पहला, name: read_file।"
+        },
+        {
+          "key": "s05_04",
+          "en": "Second, a {description}description: {value}Reads the text inside a file.",
+          "hi": "दूसरा, description: Reads the text inside a file."
+        },
+        {
+          "key": "s05_05",
+          "en": "And the third part: its {parameters}parameters, the inputs it needs. Here there's just one: {path}path, which file to read.",
+          "hi": "तीसरा: parameters, यानी ज़रूरी inputs। यहाँ बस path है: कौन-सी file पढ़नी है।"
+        },
+        {
+          "key": "s05_06",
+          "en": "The harness can offer {more}more tools. {run}run_command runs a command in the terminal.",
+          "hi": "Harness और tools भी दे सकता है। run_command terminal में command चलाता है।"
+        },
+        {
+          "key": "s05_07",
+          "en": "{edit}edit_file changes the text of a file.",
+          "hi": "edit_file file का text बदलता है।"
+        },
+        {
+          "key": "s05_08",
+          "en": "All these {descriptions}descriptions travel to the model together with the {list}message list, on every call.",
+          "hi": "ये सब descriptions message list के साथ हर call पर model तक जाते हैं।"
+        },
+        {
+          "key": "s05_09",
+          "en": "Notice something {important}important. The model only {sees}sees these descriptions.",
+          "hi": "एक ज़रूरी बात। Model सिर्फ़ ये descriptions देखता है।"
+        },
+        {
+          "key": "s05_10",
+          "en": "It never sees the tool's actual {program}program.",
+          "hi": "असली program वह कभी नहीं देखता।"
+        },
+        {
+          "key": "s05_11",
+          "en": "So the description {matters}matters a lot. If it's {vague}vague, like \"does file stuff\", the model can't be {sure}sure when to use it.",
+          "hi": "इसलिए description बहुत अहम है। साफ़ न हो, जैसे does file stuff, तो model तय नहीं कर पाता कब use करे।"
+        },
+        {
+          "key": "s05_12",
+          "en": "But a {clear}clear description, like \"reads the text inside a file\", lets the model pick the right tool with {confidence}confidence.",
+          "hi": "पर साफ़ description, जैसे reads the text inside a file, से model भरोसे से सही tool चुनता है।"
+        },
+        {
+          "key": "s05_13",
+          "en": "Even then, the model can still make {mistakes}mistakes. It can pick the {wrong}wrong tool, or give the {input}wrong input.",
+          "hi": "फिर भी model ग़लती कर सकता है। ग़लत tool चुन सकता है, या ग़लत input दे सकता है।"
+        }
+      ]
+    },
+    {
+      "key": "s06",
+      "chapter": {
+        "number": "06",
+        "title": "Tool Calling, Step by Step"
+      },
+      "plan_section": "06",
+      "lines": [
+        {
+          "key": "s06_01",
+          "en": "Now for the most important part of this lesson: {toolcalling}tool calling. Let's go through it {slowly}slowly, step by step.",
+          "hi": "अब lesson का सबसे ज़रूरी हिस्सा: tool calling। इसे धीरे-धीरे कदम-दर-कदम समझते हैं।"
+        },
+        {
+          "key": "s06_02",
+          "en": "Here's our {task}task. The user asks: {question}What port does the server use in config.txt?",
+          "hi": "Task यह है। User पूछता है: What port does the server use in config.txt?"
+        },
+        {
+          "key": "s06_03",
+          "en": "{step}Step one. The harness {sends}sends the system message, the user's question, and the {descriptions}tool descriptions to the model.",
+          "hi": "Step one। Harness system message, user का सवाल और tool descriptions model को भेजता है।"
+        },
+        {
+          "key": "s06_04",
+          "en": "{step}Step two. The model doesn't {answer}answer yet.",
+          "hi": "Step two। Model अभी जवाब नहीं देता।"
+        },
+        {
+          "key": "s06_05",
+          "en": "It replies with a {toolcall}tool call: {readfile}read_file, with the path config.txt.",
+          "hi": "वह tool call भेजता है: read_file, path config.txt के साथ।"
+        },
+        {
+          "key": "s06_06",
+          "en": "Let's {pause}pause here. This tool call is only a {request}request, written as {text}text. Nothing has {happened}happened yet.",
+          "hi": "यहाँ रुकिए। यह tool call सिर्फ़ text में लिखी एक request है। अभी कुछ नहीं हुआ।"
+        },
+        {
+          "key": "s06_07",
+          "en": "The harness {adds}adds this request to the list, as an {assistant}assistant message.",
+          "hi": "Harness इस request को list में assistant message की तरह जोड़ता है।"
+        },
+        {
+          "key": "s06_08",
+          "en": "{step}Step three. The harness {reads}reads the reply, and sees a {request}tool request.",
+          "hi": "Step three। Harness जवाब पढ़ता है और tool request देखता है।"
+        },
+        {
+          "key": "s06_09",
+          "en": "{step}Step four. The harness checks {permission}permission. Reading this file is {allowed}allowed.",
+          "hi": "Step four: harness permission जाँचता है। यह allowed है।"
+        },
+        {
+          "key": "s06_10",
+          "en": "{step}Step five. The harness {executes}executes the tool. The file {opens}opens, and its {text}text comes out.",
+          "hi": "Step five। Harness tool चलाता है। File खुलती है और text बाहर आता है।"
+        },
+        {
+          "key": "s06_11",
+          "en": "{step}Step six. The harness {adds}adds the result to the list, as a {toolmsg}tool message: {port}port = 8080, host = localhost.",
+          "hi": "Step six। Harness result को list में tool message की तरह जोड़ता है: port equals eighty eighty, host equals localhost।"
+        },
+        {
+          "key": "s06_12",
+          "en": "{step}Step seven. The harness {calls}calls the model again, with the whole {updated}updated list.",
+          "hi": "Step seven। Harness updated list के साथ model को फिर call करता है।"
+        },
+        {
+          "key": "s06_13",
+          "en": "{step}Step eight. This time, the model replies with {normal}normal text: {answer}The server uses port 8080.",
+          "hi": "Step eight। इस बार model normal text में कहता है: The server uses port eighty eighty."
+        },
+        {
+          "key": "s06_14",
+          "en": "{step}Step nine. If the model's reply contains {no}no tool request, the harness treats it as the {final}final answer and the loop {stops}stops.",
+          "hi": "Step nine। अगर model के जवाब में कोई tool request नहीं है, तो harness उसे final answer मानता है और loop रुक जाता है।"
+        },
+        {
+          "key": "s06_15",
+          "en": "Now let's {map}map this onto the agent loop.",
+          "hi": "अब इसे agent loop से मिलाते हैं।"
+        },
+        {
+          "key": "s06_16",
+          "en": "{decide}Decide: the model writes the tool request. {act}Act: the harness executes the tool.",
+          "hi": "Decide: model tool request लिखता है। Act: harness tool चलाता है।"
+        },
+        {
+          "key": "s06_17",
+          "en": "{observe}Observe: the result is added as a tool message. {evaluate}Evaluate: on the next call, the model reads the result and decides if {work}more work is needed.",
+          "hi": "Observe: result tool message बनकर जुड़ता है। Evaluate: अगली call पर model result पढ़कर तय करता है कि और काम चाहिए या नहीं।"
+        },
+        {
+          "key": "s06_18",
+          "en": "The model {decides}decides. The harness {does}does.",
+          "hi": "Model तय करता है। Harness करता है।"
+        },
+        {
+          "key": "s06_19",
+          "en": "The agent loop isn't {magic}magic. It's a simple {program}program loop: {ask}ask the model, {do}do what it requests, {add}add the result, and ask {again}again.",
+          "hi": "Agent Loop कोई जादू नहीं। यह एक सीधा Program Loop है: Model से पूछो, request पूरी करो, result जोड़ो, फिर पूछो।"
+        },
+        {
+          "key": "s06_20",
+          "en": "And if something goes {wrong}wrong? Say config.txt doesn't {exist}exist.",
+          "hi": "और अगर कुछ ग़लत हो जाए? मान लो config.txt है ही नहीं।"
+        },
+        {
+          "key": "s06_21",
+          "en": "The harness doesn't {crash}crash. It adds a tool message: {error}Error: config.txt not found.",
+          "hi": "Harness crash नहीं होता। वह tool message जोड़ता है: Error: config.txt not found."
+        },
+        {
+          "key": "s06_22",
+          "en": "On the next call, the model {reads}reads that error, and requests {another}another tool to search for the file. Errors are {feedback}feedback too.",
+          "hi": "अगली call पर model error पढ़कर file ढूँढने के लिए दूसरा tool माँगता है। Errors भी feedback हैं।"
+        }
+      ]
+    },
+    {
+      "key": "s07",
+      "chapter": {
+        "number": "07",
+        "title": "The Context Window"
+      },
+      "plan_section": "07",
+      "lines": [
+        {
+          "key": "s07_01",
+          "en": "We've seen that the list {grows}grows with every call. But it can't grow {forever}forever.",
+          "hi": "हमने देखा कि list हर call पर बढ़ती है। पर यह हमेशा नहीं बढ़ सकती।"
+        },
+        {
+          "key": "s07_02",
+          "en": "Everything sent to the model in one call has to fit within a fixed {limit}limit: the {system}system message, all the {messages}messages, the tool {descriptions}descriptions, and the tool {results}results.",
+          "hi": "एक call में model को भेजी गई हर चीज़ एक तय limit में आनी चाहिए: system message, सारे messages, tool descriptions और tool results।"
+        },
+        {
+          "key": "s07_03",
+          "en": "This limit is called the {cw}context window.",
+          "hi": "इसे context window कहते हैं।"
+        },
+        {
+          "key": "s07_04",
+          "en": "It's measured in {tokens}tokens. A token is a small {piece}piece of text, often just {part}part of a word.",
+          "hi": "इसे tokens में गिनते हैं। Token यानी text का छोटा टुकड़ा, अक्सर शब्द का हिस्सा।"
+        },
+        {
+          "key": "s07_05",
+          "en": "Think of it like a {desk}desk of fixed size. Every {paper}paper the model needs must fit on the desk at the {same}same time.",
+          "hi": "इसे तय size की desk समझिए। Model के सारे ज़रूरी काग़ज़ एक साथ desk पर आने चाहिए।"
+        },
+        {
+          "key": "s07_06",
+          "en": "As the agent {works}works, messages pile up, and the desk {fills}fills.",
+          "hi": "Agent काम करता है, तो messages जमा होते हैं और desk भरती है।"
+        },
+        {
+          "key": "s07_07",
+          "en": "Then one {huge}huge tool result arrives. Say the agent reads a very {large}large file.",
+          "hi": "फिर एक बहुत बड़ा tool result आता है। मान लो agent एक बहुत बड़ी file पढ़ता है।"
+        },
+        {
+          "key": "s07_08",
+          "en": "Suddenly, most of the desk is {gone}gone.",
+          "hi": "अचानक desk का बड़ा हिस्सा गया।"
+        },
+        {
+          "key": "s07_09",
+          "en": "And soon, the desk is {full}full.",
+          "hi": "और जल्द desk भर जाती है।"
+        },
+        {
+          "key": "s07_10",
+          "en": "What happens then? First, the request can simply {fail}fail.",
+          "hi": "तब क्या होता है? पहला, request fail हो सकती है।"
+        },
+        {
+          "key": "s07_11",
+          "en": "Second, the harness can {remove}remove or {shorten}shorten older messages to make room.",
+          "hi": "दूसरा, harness जगह बनाने के लिए पुराने messages हटा या छोटे कर सकता है।"
+        },
+        {
+          "key": "s07_12",
+          "en": "Third, it can replace older messages with a short {summary}summary.",
+          "hi": "तीसरा, वह पुराने messages की जगह छोटा summary रख सकता है।"
+        },
+        {
+          "key": "s07_13",
+          "en": "There's also a {cost}cost. A longer context generally makes each call {slower}slower and more {expensive}expensive.",
+          "hi": "एक cost भी है। लंबा context आमतौर पर हर call को धीमा और महँगा बनाता है।"
+        },
+        {
+          "key": "s07_14",
+          "en": "So deciding what {stays}stays on the desk, and what {goes}goes, is one of the {hardest}hardest problems in building agents.",
+          "hi": "Desk पर क्या रहे, क्या जाए, यह तय करना agents बनाने की सबसे कठिन समस्याओं में से एक है।"
+        },
+        {
+          "key": "s07_15",
+          "en": "It's called {cm}context management. And it's the topic of our {next}next lesson.",
+          "hi": "इसे context management कहते हैं। यही हमारे अगले lesson का topic है।"
+        }
+      ]
+    },
+    {
+      "key": "s08",
+      "chapter": {
+        "number": "08",
+        "title": "When Does the Loop Stop?"
+      },
+      "plan_section": "08",
+      "lines": [
+        {
+          "key": "s08_01",
+          "en": "A loop that never {ends}ends would be a problem. So how does the agent loop {stop}stop?",
+          "hi": "कभी न रुकने वाला loop समस्या है। तो agent loop रुकता कैसे है?"
+        },
+        {
+          "key": "s08_02",
+          "en": "There are four common {ways}ways.",
+          "hi": "चार आम तरीक़े हैं।"
+        },
+        {
+          "key": "s08_03",
+          "en": "One: the {normal}normal stop. The model replies without any {tool}tool request, so the task is considered {finished}finished.",
+          "hi": "पहला: normal stop। Model बिना किसी tool request के जवाब देता है, तो task पूरा माना जाता है।"
+        },
+        {
+          "key": "s08_04",
+          "en": "Two: a {step}step limit. Each {trip}trip around the loop is called an {iteration}iteration.",
+          "hi": "दूसरा: step limit। Loop के हर चक्कर को iteration कहते हैं।"
+        },
+        {
+          "key": "s08_05",
+          "en": "The harness allows only a {maximum}maximum number of iterations, for example {twenty}20.",
+          "hi": "Harness ज़्यादा से ज़्यादा कुछ ही iterations चलने देता है, जैसे बीस।"
+        },
+        {
+          "key": "s08_06",
+          "en": "When the counter {reaches}reaches the limit, the loop {halts}halts. This {protects}protects against a loop that never ends.",
+          "hi": "Counter limit तक पहुँचते ही loop रुक जाता है। इससे loop अंतहीन चलने से बचता है।"
+        },
+        {
+          "key": "s08_07",
+          "en": "Three: human {approval}approval. Before a {risky}risky tool, like {deleting}deleting a file or running a {dangerous}dangerous command, the harness {pauses}pauses and asks you: {allow}allow this action?",
+          "hi": "तीसरा: human approval। Risky tool से पहले, जैसे file delete करना या ख़तरनाक command चलाना, harness रुककर आपसे पूछता है: allow this action?"
+        },
+        {
+          "key": "s08_08",
+          "en": "Four: the model asks a {question}question. If information is {missing}missing, the model replies with a question {instead}instead of guessing, and the loop {waits}waits for your answer.",
+          "hi": "चौथा: model सवाल पूछता है। अगर जानकारी अधूरी हो, तो model अंदाज़ा लगाने की बजाय सवाल पूछता है और loop आपके जवाब का इंतज़ार करता है।"
+        },
+        {
+          "key": "s08_09",
+          "en": "Remember from the last lesson: agents are not {magic}magic. These {safeguards}safeguards are written into the {harness}harness by its {developer}developer.",
+          "hi": "पिछले lesson से याद कीजिए: agents जादू नहीं हैं। ये safeguards harness में उसका developer लिखता है।"
+        },
+        {
+          "key": "s08_10",
+          "en": "Human {oversight}oversight is a deliberate part of the design.",
+          "hi": "Human oversight design का सोचा-समझा हिस्सा है।"
+        }
+      ]
+    },
+    {
+      "key": "s09",
+      "chapter": {
+        "number": "09",
+        "title": "The Bug-Fixing Agent, From the Inside"
+      },
+      "plan_section": "09",
+      "lines": [
+        {
+          "key": "s09_01",
+          "en": "Now let's put it all {together}together. Remember the {bugfix}bug-fixing agent from the last lesson?",
+          "hi": "अब सब जोड़ते हैं। याद है पिछले lesson का bug-fixing agent?"
+        },
+        {
+          "key": "s09_02",
+          "en": "Let's {replay}replay it, this time at the level of {messages}messages.",
+          "hi": "अब इसे messages के स्तर पर देखें।"
+        },
+        {
+          "key": "s09_03",
+          "en": "The user {writes}writes: {msg}The program is crashing. Find the bug and fix it.",
+          "hi": "User लिखता है: The program is crashing. Find the bug and fix it."
+        },
+        {
+          "key": "s09_04",
+          "en": "{call}Call one. The model {decides}decides to run the tests first. It {requests}requests run_command: run tests.",
+          "hi": "Call one: model पहले tests चलाना तय करता है, और माँगता है run_command: run tests."
+        },
+        {
+          "key": "s09_05",
+          "en": "The harness {runs}runs them. Tool result: {failed}Test failed, wrong result in total().",
+          "hi": "Harness tests चलाता है। Tool result: Test failed, wrong result in total()."
+        },
+        {
+          "key": "s09_06",
+          "en": "{call}Call two. The model asks to {read}read the file math_utils.py.",
+          "hi": "Call two। Model math_utils.py file पढ़ना चाहता है।"
+        },
+        {
+          "key": "s09_07",
+          "en": "The harness {reads}reads it, and adds the {code}code to the list as a tool message.",
+          "hi": "Harness उसे पढ़कर code को tool message के रूप में list में जोड़ता है।"
+        },
+        {
+          "key": "s09_08",
+          "en": "{call}Call three. The model has {spotted}spotted the bug. It requests {edit}edit_file on math_utils.py, with the fix.",
+          "hi": "Call three। Model को bug मिल गया है। वह fix के साथ math_utils.py पर edit_file माँगता है।"
+        },
+        {
+          "key": "s09_09",
+          "en": "The harness makes the {change}change. Tool result: {updated}File updated successfully.",
+          "hi": "Harness बदलाव करता है। Tool result: File updated successfully."
+        },
+        {
+          "key": "s09_10",
+          "en": "{call}Call four. The model wants to {check}check its work. It requests {run}run_command: run tests, again.",
+          "hi": "Call four। Model अपना काम जाँचना चाहता है। दोबारा माँगता है run_command: run tests."
+        },
+        {
+          "key": "s09_11",
+          "en": "Tool result: {passed}All tests passed.",
+          "hi": "Tool result: All tests passed."
+        },
+        {
+          "key": "s09_12",
+          "en": "{call}Call five. This time there's {no}no tool request, just a {final}final message: Bug fixed.",
+          "hi": "Call five। इस बार tool request नहीं, बस final message: Bug fixed."
+        },
+        {
+          "key": "s09_13",
+          "en": "total() was adding the numbers {incorrectly}incorrectly.",
+          "hi": "total() was adding the numbers incorrectly."
+        },
+        {
+          "key": "s09_14",
+          "en": "The harness {shows}shows this answer to the user, and the loop goes {quiet}quiet.",
+          "hi": "Harness यह जवाब user को दिखाता है और loop शांत हो जाता है।"
+        },
+        {
+          "key": "s09_15",
+          "en": "Five {calls}calls. And on every single one, the model received the whole {history}history again.",
+          "hi": "पाँच calls। और हर एक call पर, model को पूरी history फिर से मिली।"
+        },
+        {
+          "key": "s09_16",
+          "en": "That's why the context keeps {growing}growing.",
+          "hi": "इसीलिए context बढ़ता ही जाता है।"
+        }
+      ]
+    },
+    {
+      "key": "s10",
+      "chapter": {
+        "number": "10",
+        "title": "Conclusion and What's Next"
+      },
+      "plan_section": "10",
+      "lines": [
+        {
+          "key": "s10_01",
+          "en": "Today we looked {inside}inside an agent.",
+          "hi": "आज हमने Agent के अंदर झाँका।"
+        },
+        {
+          "key": "s10_02",
+          "en": "We saw that the model doesn't actually do any {work}work by itself. It only makes {decisions}decisions.",
+          "hi": "हमने देखा कि Model ख़ुद कोई काम नहीं करता। वह सिर्फ़ फ़ैसला लेता है।"
+        },
+        {
+          "key": "s10_03",
+          "en": "The real work is done by the {harness}harness.",
+          "hi": "असली काम Harness करता है।"
+        },
+        {
+          "key": "s10_04",
+          "en": "And the {whole}whole conversation is sent to the model again, from the start, every single {time}time.",
+          "hi": "और पूरी बातचीत हर बार नए सिरे से Model को भेजी जाती है।"
+        },
+        {
+          "key": "s10_05",
+          "en": "But one {problem}big problem is still left. The context window is {limited}limited.",
+          "hi": "लेकिन एक बड़ी समस्या अभी बाकी है। Context Window सीमित है।"
+        },
+        {
+          "key": "s10_06",
+          "en": "The more {work}work an agent does, the more messages {pile}pile up. And at some point, it runs out of {space}space.",
+          "hi": "Agent जितना काम करता है, उतने Messages जमा होते हैं। और एक समय के बाद जगह ख़त्म हो जाती है।"
+        },
+        {
+          "key": "s10_07",
+          "en": "So how does an agent finish {big}big tasks? How does it {remember}remember what's important, and {let}let go of what isn't?",
+          "hi": "तो Agent बड़े काम कैसे पूरे करे? ज़रूरी बातें कैसे याद रखे, और फ़ालतू कैसे छोड़े?"
+        },
+        {
+          "key": "s10_08",
+          "en": "That's exactly what we'll learn in the {next}next lesson: {cm}Context Management and Memory.",
+          "hi": "अगले lesson में हम ठीक यही सीखेंगे: Context Management और Memory।"
+        }
+      ]
+    }
+  ],
+  "excluded": []
+}

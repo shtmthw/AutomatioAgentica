@@ -1,0 +1,59 @@
+# AutomatioAgentica production.
+# Defaults reproduce the house style of "What is Agentic AI?" (Nov 2026): Manim
+# animation, voice-first timing, -16 LUFS mix with ducked ambient music, 1080p30
+# H.264 CRF 17, English subtitles as separate SRT + VTT files (never burned in).
+# Change only what this production needs. Voices are profiles from voices.toml.
+
+[production]
+title = "Inside an AI Agent: Who Actually Runs the Loop?"
+source_language = "en"
+script = "inputs/script.md"
+plan = "inputs/plan.txt"
+notes = ["inputs/notes-1.md"]
+
+[versions.en]
+voice = "english-andrew"   # edge en-US-AndrewMultilingualNeural (-5%)
+
+# Hindi: voiced over the English picture and timeline (same video, same subtitles). Not rendered.
+[versions.hi]
+voice = "hindi-adam"       # elevenlabs pNInz6obpgDQGcFmaJgB (Adam, eleven_v4) - the house Hindi voice
+mode = "dub"
+follow = "en"
+
+
+[subtitles]
+language = "en"
+formats = ["srt", "vtt"]
+
+# [video]   width, height, fps, quality, encoder ("libx264" | "copy"), crf, preset, audio_bitrate
+# [audio]   voice_lufs, music_lufs, duck_db, line_gap, limiter_db, music ("ambient" | "none")
+# [review]  draft (free low-res draft before paid voices), visual_review (agent checks contact sheets)
+# [render]  jobs (parallel Manim processes), timeout
+# [pronunciation.hi]  production-specific respellings, e.g. "LLM" = "एल एल एम"
+
+# Spoken forms for the English voice only (subtitles and the screen keep the written form).
+[pronunciation.en]
+"read_file" = "read file"
+"run_command" = "run command"
+"edit_file" = "edit file"
+"config.txt" = "config dot T X T"
+"math_utils.py" = "math utils dot P Y"
+"total()" = "total"
+"8080" = "eighty eighty"
+"=" = "equals"
+
+# Spoken forms for the Hindi voice only.
+[pronunciation.hi]
+"read_file" = "read file"
+"run_command" = "run command"
+"edit_file" = "edit file"
+"config.txt" = "config dot T X T"
+"math_utils.py" = "math utils dot P Y"
+"total()" = "total"
+
+# Hindi dub: fitted onto the English timeline (automatio/dub.py). Steps of sections 06 and 09
+# start together with their English line.
+[dub]
+max_speedup = 1.05
+anchors = ["s06_03", "s06_04", "s06_08", "s06_09", "s06_10", "s06_11", "s06_12", "s06_13", "s06_14", "s06_15",
+           "s06_20", "s09_04", "s09_06", "s09_08", "s09_10", "s09_12", "s09_15"]
