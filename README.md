@@ -1,6 +1,6 @@
 # AutomatioAgentica
 
-**A harness-driven, end-to-end video production pipeline.** Hand a connected agent
+**An agent-driven, end-to-end video production pipeline.** Hand a connected agent
 harness (Claude Code or any agent with file and process access) a **script** and a
 **production plan**. AutomatioAgentica turns them into finished long-form lessons in
 **Hindi and English**: programmatic animation, the house voices, a broadcast-level mix, and
