@@ -39,6 +39,7 @@ free; voicing a line twice is not.
 |---|---|---|---|
 | `agentic-ai-intro` | Episode 01: What is Agentic AI? | Hindi + English, full | delivered (Hindi 10:44, English 8:23); the regression reference |
 | `ep02-inside-the-agent` | Episode 02: Inside an AI Agent: Who Actually Runs the Loop? | English master + Hindi dub | English delivered (13:17); Hindi dub waits for ElevenLabs credits (32 of 140 lines voiced) |
+| `ep03-context-and-memory` | Episode 03: Context and Memory: How an Agent Handles Long Tasks | English (Hindi dub planned) | English delivered (13:12) with thumbnail; the Hindi voice-over is deferred and can be added later as a dub on the same timeline |
 | `demo-tool-call` | What is a tool call? | Hindi + English, full | a two-line live smoke test of the ElevenLabs path |
 
 Episode 01 is also the regression test. The pipeline reproduces its Hindi version (same
@@ -147,11 +148,14 @@ automatio/          pipeline: cli, pipeline (stages), state, voice, providers/, 
 agentic_video/      visual library: style, components, icons, internals (Episode 02 building blocks),
                     VoiceScene (+ runtime)
 productions/<slug>/ production.toml, inputs/ (script, plan, notes), narration.json, scenes/
+                    (ep03 adds scenes/memory_kit.py: context & memory components + overlap checker)
+tools/              voice_pauses.py: caps overlong pauses inside free-voice narration clips
 voices.toml         voice registry
 docs/               SCENE_AUTHORING.md (for agents writing scenes)
 tests/              unit tests + offline end-to-end pipeline test (full versions and a dub)
 AGENTS.md CLAUDE.md .claude/skills/produce-video/   harness integration
 ANIMINFO.md         production playbook: what worked, what failed, why (Episodes 01 and 02)
+                    (Episode 03 decisions: productions/ep03-context-and-memory/inputs/notes-1.md)
 CHANGELOG.md        what changed between pipeline versions
 ```
 
@@ -170,6 +174,34 @@ Tracked: code, `voices.toml`, `productions/*/` (inputs, narration, scenes). Giti
 .venv/bin/python -m automatio report my-video
 .venv/bin/python -m unittest discover -s tests -v              # tests (offline, ~30 s)
 ```
+
+## Polishing tools (added with Episode 03)
+
+- **Natural pauses (`tools/voice_pauses.py`).** The English house voice (edge-tts Andrew) is
+  deterministic and sometimes holds ~0.5 s at commas and colons or hesitates mid-phrase, which
+  sounds halting. The tool shortens only the silence inside each cached clip (comma pauses to
+  0.30 s, mid-phrase hesitations to 0.10 s, sentence breaks to 0.60 s; cuts in true silence with
+  5 ms crossfades) and shifts the clip's word timings, so cues and subtitles stay exact. Voice,
+  speed and pitch are untouched; paid (ElevenLabs) clips are never rewritten.
+
+  ```bash
+  .venv/bin/python tools/voice_pauses.py my-video --dry-run    # what would be cut
+  .venv/bin/python tools/voice_pauses.py my-video              # polish, then:
+  .venv/bin/python -m automatio run my-video --force voice     # rebuild manifest, renders, mix
+  ```
+
+- **Context & memory components (`productions/ep03-context-and-memory/scenes/memory_kit.py`).**
+  Reusable building blocks on top of `agentic_video/internals.py`: `SizedCard` (height follows
+  the amount of text), `SummaryCard`, `PlaceholderCard`, `NoteCard`, `NotesBlock`, `Notebook`
+  (memory store), `LiveContext` (a context window whose meter and % readout are always computed
+  from the cards inside it), `CallCounter`, `TechniqueTag` and `session_wipe` (session divider).
+  Kept next to the production's scenes so Episodes 01 and 02 are not re-rendered; a later episode
+  can import or promote them.
+- **Overlap checker (`memory_kit.CheckedScene`).** Scenes that import the kit get a
+  `VoiceScene` that, after every animation, compares the visible text, cards and pills of
+  different objects and prints an `OVERLAP` line to the render log for anything that stays
+  overlapped for more than 0.6 s (labels on their own panel are ignored). It also fades the
+  chapter tag in with the first narration line, so sections start without dead air.
 
 Pronunciation: add respellings under `[pronunciation.hi]` / `[pronunciation.en]` in
 `production.toml` (or the voice profile in `voices.toml`). Subtitles always keep the

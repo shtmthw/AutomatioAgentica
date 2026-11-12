@@ -1,0 +1,52 @@
+# AutomatioAgentica production.
+# Defaults reproduce the house style of "What is Agentic AI?" (Nov 2026): Manim
+# animation, voice-first timing, -16 LUFS mix with ducked ambient music, 1080p30
+# H.264 CRF 17, English subtitles as separate SRT + VTT files (never burned in).
+# Change only what this production needs. Voices are profiles from voices.toml.
+
+[production]
+title = "Context and Memory: How an Agent Handles Long Tasks"
+source_language = "en"
+script = "inputs/script.md"
+plan = "inputs/plan.md"
+notes = ["inputs/notes-1.md"]
+
+[versions.en]
+voice = "english-andrew"   # edge en-US-AndrewMultilingualNeural (-5%)
+
+
+[subtitles]
+language = "en"
+formats = ["srt", "vtt"]
+# own_language = true     # also subtitles-<lang>.srt/.vtt in each version's own language (e.g. Hindi)
+
+# The plan's deliverable names ("Final expectations" 11 and 12), linked inside output/<slug>/.
+# Hindi (ep03_voiceover_HI.mp3, ep03_HI.srt, side-by-side) is deferred: see inputs/notes-1.md.
+[deliver]
+script_dir = "narration"   # narration/en/: the narration text per section
+
+[deliver.aliases]
+"ep03_context_and_memory_EN.mp4" = "english/final-video.mp4"
+"ep03_EN.srt" = "english/subtitles-en.srt"
+"timings/en.json" = "english/timings.json"
+
+# [video]   width, height, fps, quality, encoder ("libx264" | "copy"), crf, preset, audio_bitrate
+# [audio]   voice_lufs, music_lufs, duck_db, line_gap, limiter_db, music ("ambient" | "none")
+# [review]  draft (free low-res draft before paid voices), visual_review (agent checks contact sheets)
+# [render]  jobs (parallel Manim processes), timeout
+# [pronunciation.hi]  production-specific respellings, e.g. "LLM" = "एल एल एम"
+
+# Spoken forms for the English voice only (subtitles and the screen keep the written form).
+[pronunciation.en]
+"read_file" = "read file"
+"run_command" = "run command"
+"edit_file" = "edit file"
+"save_note" = "save note"
+"search_notes" = "search notes"
+"config.txt" = "config dot T X T"
+"math_utils.py" = "math utils dot P Y"
+"total()" = "total"
+"8080" = "eighty eighty"
+"8800" = "eighty-eight hundred"
+"9090" = "ninety ninety"
+"=" = "equals"

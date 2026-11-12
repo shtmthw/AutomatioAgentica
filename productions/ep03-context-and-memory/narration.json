@@ -1,0 +1,672 @@
+{
+ "schema": "automatio.narration/1",
+ "title": "Context and Memory: How an Agent Handles Long Tasks",
+ "source_language": "en",
+ "sections": [
+  {
+   "key": "s01",
+   "chapter": {
+    "number": "01",
+    "title": "The Desk Is Full"
+   },
+   "plan_section": "01",
+   "lines": [
+    {
+     "key": "s01_01",
+     "topic": "Recap: model, harness, context window",
+     "en": "Welcome back. Last time, we opened up an AI agent and looked {inside}inside."
+    },
+    {
+     "key": "s01_02",
+     "en": "We saw that the model {only}only reads text and {writes}writes text. On its own, it can't {open}open a file or run a command."
+    },
+    {
+     "key": "s01_03",
+     "en": "The {harness}harness runs the loop. When the model asks for a tool, the harness {executes}executes it and {adds}adds the result to the conversation."
+    },
+    {
+     "key": "s01_04",
+     "en": "That conversation is a {list}list of messages. And on {every}every call, the harness sends the {whole}whole list to the model again."
+    },
+    {
+     "key": "s01_05",
+     "en": "All of it has to fit inside the {cw}context window, which is {limited}limited."
+    },
+    {
+     "key": "s01_06",
+     "en": "We called it the model's {desk}desk. And that desk has a {fixed}fixed size."
+    },
+    {
+     "key": "s01_07",
+     "topic": "Hook: the context window fills up",
+     "en": "But real tasks are {long}long. An agent might need {hundreds}hundreds of steps to finish one job."
+    },
+    {
+     "key": "s01_08",
+     "en": "Watch. {c5}Call five. {c20}Call twenty. {c60}Call sixty. Every step {adds}adds more messages."
+    },
+    {
+     "key": "s01_09",
+     "en": "The meter {climbs}climbs. {amber}Amber. {red}Red. And then the window is {full}full."
+    },
+    {
+     "key": "s01_10",
+     "en": "The task isn't {finished}finished. The desk is {full}full. {now}Now what?"
+    },
+    {
+     "key": "s01_11",
+     "en": "How do real agents {keep}keep working? And how do they {remember}remember things from yesterday?"
+    },
+    {
+     "key": "s01_12",
+     "topic": "Title: Context & Memory",
+     "en": "That's today's lesson: {title}context and memory."
+    }
+   ]
+  },
+  {
+   "key": "s02",
+   "chapter": {
+    "number": "02",
+    "title": "What Is Actually Filling the Context?"
+   },
+   "plan_section": "02",
+   "lines": [
+    {
+     "key": "s02_01",
+     "en": "So first, what is {actually}actually filling the context window?",
+     "topic": "What fills the context window"
+    },
+    {
+     "key": "s02_02",
+     "en": "At the top is the {system}system message. {small}Small, and always there."
+    },
+    {
+     "key": "s02_03",
+     "en": "Then the {tools}tool descriptions. Also {small}small, and always present."
+    },
+    {
+     "key": "s02_04",
+     "en": "{user}User messages are usually thin, like a short question. The {assistant}assistant's messages and tool calls are {thin}thin too."
+    },
+    {
+     "key": "s02_05",
+     "en": "But {tool}tool results can be very {tall}tall."
+    },
+    {
+     "key": "s02_06",
+     "en": "The model {requests}requests read_file, on a {large}large file.",
+     "topic": "One large file read: 20% to 60%"
+    },
+    {
+     "key": "s02_07",
+     "en": "The harness {adds}adds the result as one tool message, and the meter {jumps}jumps from 20% to 60% in one step."
+    },
+    {
+     "key": "s02_08",
+     "en": "{sort}Sort everything by type, and the picture is clear. In many agent tasks, {most}tool results take the most space."
+    },
+    {
+     "key": "s02_09",
+     "en": "And {remember}remember: everything in the window is {sent}sent again on {every}every call.",
+     "topic": "Everything is sent again on every call"
+    },
+    {
+     "key": "s02_10",
+     "en": "So one large tool result is {paid}paid for again and again, in {time}time and in {cost}cost."
+    }
+   ]
+  },
+  {
+   "key": "s03",
+   "chapter": {
+    "number": "03",
+    "title": "Why Not Just Use a Bigger Window?"
+   },
+   "plan_section": "03",
+   "lines": [
+    {
+     "key": "s03_01",
+     "en": "So why not just make the window {bigger}bigger?",
+     "topic": "Why not a bigger window?"
+    },
+    {
+     "key": "s03_02",
+     "en": "Bigger windows {help}help, but they don't {solve}solve the problem. Here's why."
+    },
+    {
+     "key": "s03_03",
+     "en": "{one}One: it still has a limit. A long enough task {fills}fills even a big window."
+    },
+    {
+     "key": "s03_04",
+     "en": "{two}Two: it gets {slower}slower and more {expensive}expensive. More text in every call means each call {costs}costs more and takes longer."
+    },
+    {
+     "key": "s03_05",
+     "en": "{three}Three: important details get {harder}harder to find. When the context is very long and {cluttered}cluttered, models often become less {reliable}reliable at using the right piece of information.",
+     "topic": "Details get lost in long contexts"
+    },
+    {
+     "key": "s03_06",
+     "en": "Like the user's original {goal}goal: still in there, but {lost}lost among hundreds of other messages."
+    },
+    {
+     "key": "s03_07",
+     "en": "A bigger {desk}desk covered with a thousand papers doesn't help you work. A {clean}clean desk with the {right}right ten papers does."
+    },
+    {
+     "key": "s03_08",
+     "en": "This is called {cm}context management: deciding what the model {sees}sees on each call. It's the {harness}harness's job, set up by the developers who build it.",
+     "topic": "Context management: the right context"
+    },
+    {
+     "key": "s03_09",
+     "en": "The goal is not {more}more context. The goal is the {right}right context."
+    }
+   ]
+  },
+  {
+   "key": "s04",
+   "chapter": {
+    "number": "04",
+    "title": "Technique 1: Keep Tool Results Small"
+   },
+   "plan_section": "04",
+   "lines": [
+    {
+     "key": "s04_01",
+     "en": "{tech}Technique one: keep tool results {small}small.",
+     "topic": "Technique 1: keep tool results small"
+    },
+    {
+     "key": "s04_02",
+     "en": "The {cheapest}cheapest way to save space is to {not}not put unnecessary text into the context in the first place."
+    },
+    {
+     "key": "s04_03",
+     "en": "{first}First, read only the {part}part you need."
+    },
+    {
+     "key": "s04_04",
+     "en": "{before}Before: read_file returns a {whole}whole five-thousand-line file."
+    },
+    {
+     "key": "s04_05",
+     "en": "{after}After: the tool call asks only for {lines}lines 40 to 80, and a {small}small card comes back."
+    },
+    {
+     "key": "s04_06",
+     "en": "{second}Second, {search}search instead of reading everything.",
+     "topic": "Search instead of reading everything"
+    },
+    {
+     "key": "s04_07",
+     "en": "{before}Before: the agent reads {ten}ten files to find where total() is. {after}After: one {search}search returns three short {matching}matching lines."
+    },
+    {
+     "key": "s04_08",
+     "en": "{third}Third, the harness {shortens}shortens very long output.",
+     "topic": "The harness shortens long output"
+    },
+    {
+     "key": "s04_09",
+     "en": "A run_command result can be {thousands}thousands of lines. The harness keeps the {beginning}beginning and the {end}end, with a {note}note in the middle: output shortened, 4,800 more lines."
+    },
+    {
+     "key": "s04_10",
+     "en": "That note {matters}matters. The harness must {tell}tell the model that text was cut.",
+     "topic": "Why the 'output shortened' note matters"
+    },
+    {
+     "key": "s04_11",
+     "en": "{without}Without it, the model thinks it has seen {everything}everything, and answers {confidently}confidently from a wrong assumption."
+    },
+    {
+     "key": "s04_12",
+     "en": "{with}With the note, the model knows something is {missing}missing, and {asks}asks for the part it needs."
+    }
+   ]
+  },
+  {
+   "key": "s05",
+   "chapter": {
+    "number": "05",
+    "title": "Technique 2: Trim Old Messages"
+   },
+   "plan_section": "05",
+   "lines": [
+    {
+     "key": "s05_01",
+     "topic": "Technique 2: trim old messages",
+     "en": "{tech}Technique two: {trim}trim old messages."
+    },
+    {
+     "key": "s05_02",
+     "en": "When the window gets {full}full, the harness {removes}removes the oldest messages so new ones fit."
+    },
+    {
+     "key": "s05_03",
+     "en": "Here the window is at {pct}95%, and a {new}new message needs to come in."
+    },
+    {
+     "key": "s05_04",
+     "en": "The {oldest}oldest messages slide out, the {drops}meter drops, and the new one {fits}fits."
+    },
+    {
+     "key": "s05_05",
+     "topic": "System message pinned, tool calls leave in pairs",
+     "en": "The {system}system message stays {pinned}pinned at the top. And a tool call and its result always leave {together}together, as a {pair}pair."
+    },
+    {
+     "key": "s05_06",
+     "topic": "Gentler trimming: placeholders",
+     "en": "A {gentler}gentler version empties only old, large {tool}tool results, and leaves a {note}short note in their place."
+    },
+    {
+     "key": "s05_07",
+     "topic": "The danger: a trimmed instruction",
+     "en": "But trimming has a {danger}danger. The {first}first user message said: Fix the crash. Do not change the {public}public function names."
+    },
+    {
+     "key": "s05_08",
+     "en": "That message gets {trimmed}trimmed away. A few steps {later}later, the model {renames}renames a function. It can {no}no longer see the instruction."
+    },
+    {
+     "key": "s05_09",
+     "en": "Trimming is {simple}simple and fast, but it's {blind}blind. It throws away old messages, {important}important or not."
+    },
+    {
+     "key": "s05_10",
+     "en": "And once a message is {out}out of the window, the model {cannot}cannot see it any more."
+    }
+   ]
+  },
+  {
+   "key": "s06",
+   "chapter": {
+    "number": "06",
+    "title": "Technique 3: Summarize (Compaction)"
+   },
+   "plan_section": "06",
+   "lines": [
+    {
+     "key": "s06_01",
+     "topic": "Technique 3: compaction",
+     "en": "{tech}Technique three: {summarize}summarize old messages."
+    },
+    {
+     "key": "s06_02",
+     "en": "Instead of {throwing}throwing old messages away, the harness {replaces}replaces them with a short {summary}summary. This is commonly called {compaction}compaction."
+    },
+    {
+     "key": "s06_03",
+     "topic": "Compaction step by step",
+     "en": "{step}Step one: the harness {notices}notices the window is getting full. The meter crosses a {threshold}threshold, in this example {pct}80%."
+    },
+    {
+     "key": "s06_04",
+     "en": "{step}Step two: the harness makes a {separate}separate call to the model, with the {older}older messages and one {instruction}instruction: Summarize the important points of this conversation so far."
+    },
+    {
+     "key": "s06_05",
+     "en": "{step}Step three: the model {writes}writes the summary, as normal text. The harness only decides {when}when to ask, and {what}what to replace."
+    },
+    {
+     "key": "s06_06",
+     "en": "{step}Step four: the harness {swaps}swaps them. The older messages {become}become one summary. The {system}system message stays on top, and the {newest}newest messages stay as they are."
+    },
+    {
+     "key": "s06_07",
+     "en": "{step}Step five: the meter {drops}drops to 25%, and the loop {continues}continues."
+    },
+    {
+     "key": "s06_08",
+     "topic": "What a good summary keeps",
+     "en": "A good summary keeps the {goal}goal, the user's {rules}rules, what's {done}done, what's {left}left, and key {facts}facts like file names and errors."
+    },
+    {
+     "key": "s06_09",
+     "topic": "Summaries are lossy",
+     "en": "But a summary is {lossy}lossy. An old message said: the user wants error messages in {simple}simple words."
+    },
+    {
+     "key": "s06_10",
+     "en": "The summary {left}left it out. So the model never {sees}sees it again, and stops {following}following it."
+    },
+    {
+     "key": "s06_11",
+     "topic": "Comparing the three techniques",
+     "en": "{comparing}Comparing the three: {small}small tool results save space {early}early, but you might {miss}miss a part you needed."
+    },
+    {
+     "key": "s06_12",
+     "en": "{trimming}Trimming saves {lot}a lot, but can lose old {instructions}instructions completely."
+    },
+    {
+     "key": "s06_13",
+     "en": "{summarizing}Summarizing saves a lot too, but can lose small {details}details."
+    },
+    {
+     "key": "s06_14",
+     "en": "Every technique for saving space {loses}loses something. Context management is {choosing}choosing what you can afford to lose."
+    }
+   ]
+  },
+  {
+   "key": "s07",
+   "chapter": {
+    "number": "07",
+    "title": "Memory: Writing Things Down"
+   },
+   "plan_section": "07",
+   "lines": [
+    {
+     "key": "s07_01",
+     "topic": "Sessions: what about tomorrow?",
+     "en": "All of this happens inside {one}one conversation. What about {tomorrow}tomorrow?"
+    },
+    {
+     "key": "s07_02",
+     "en": "A {session}session is one continuous conversation with the agent, from {start}start to {end}end."
+    },
+    {
+     "key": "s07_03",
+     "en": "In session {one}one, Rahul says: In this project, {always}always run the tests before you say a task is done. The agent {follows}follows it."
+    },
+    {
+     "key": "s07_04",
+     "en": "Then the session {ends}ends, and the context window is {cleared}cleared."
+    },
+    {
+     "key": "s07_05",
+     "en": "In session {two}two, the agent {skips}skips the tests. The rule is {gone}gone, because the message that held it is gone."
+    },
+    {
+     "key": "s07_06",
+     "topic": "Memory: a notebook outside the window",
+     "en": "{memory}Memory is information the harness saves {outside}outside the context window, usually in {files}ordinary files, so it can be {back}brought back later."
+    },
+    {
+     "key": "s07_07",
+     "en": "The context window is the {desk}desk. Memory is a {notebook}notebook in the drawer. The desk gets {cleared}cleared every day. The notebook {stays}stays."
+    },
+    {
+     "key": "s07_08",
+     "topic": "Session 1 with memory: save_note",
+     "en": "Now, session one {again}again, with memory. Rahul adds: {remember}Remember this."
+    },
+    {
+     "key": "s07_09",
+     "en": "The model replies with a {call}tool call to {save}save_note, with the text: Always run tests before finishing a task."
+    },
+    {
+     "key": "s07_10",
+     "en": "The harness {executes}executes it. It {saves}saves the note in the notebook, and adds a {tool}tool message: Note saved."
+    },
+    {
+     "key": "s07_11",
+     "en": "The session {ends}ends. The messages are gone, but the notebook {keeps}keeps its note."
+    },
+    {
+     "key": "s07_12",
+     "topic": "Session 2: notes loaded back",
+     "en": "In session {two}two, before the {first}first call, the harness {puts}puts the saved notes into the context window."
+    },
+    {
+     "key": "s07_13",
+     "en": "Rahul says: {fix}Fix the login bug."
+    },
+    {
+     "key": "s07_14",
+     "en": "The model {fixes}fixes it, and before {reporting}reporting back, it calls {run}run_command to run the tests."
+    },
+    {
+     "key": "s07_15",
+     "topic": "The model doesn't remember",
+     "en": "It's exactly the {same}same model in both sessions. It didn't {learn}learn anything."
+    },
+    {
+     "key": "s07_16",
+     "en": "It follows the rule only because the harness put the {note}note back into the {text}text it received."
+    },
+    {
+     "key": "s07_17",
+     "en": "The model doesn't {remember}remember. The harness {writes}writes it down and {brings}brings it back."
+    },
+    {
+     "key": "s07_18",
+     "topic": "What is worth saving",
+     "en": "Worth saving: {facts}facts, like how the tests are run. {rules}Rules, like: do not rename public functions."
+    },
+    {
+     "key": "s07_19",
+     "en": "And {progress}progress, like: login bug, cause found, fix not written yet."
+    }
+   ]
+  },
+  {
+   "key": "s08",
+   "chapter": {
+    "number": "08",
+    "title": "Retrieval: Only What You Need"
+   },
+   "plan_section": "08",
+   "lines": [
+    {
+     "key": "s08_01",
+     "topic": "When memory overflows the context",
+     "en": "Weeks {pass}pass, and the notebook now holds {count}300 notes."
+    },
+    {
+     "key": "s08_02",
+     "en": "If the harness loads them {all}all at the start of a session, the window is at {pct}70% before the user says a word."
+    },
+    {
+     "key": "s08_03",
+     "en": "Memory can {overflow}overflow the context too."
+    },
+    {
+     "key": "s08_04",
+     "topic": "Retrieval: only the relevant notes",
+     "en": "The answer is {retrieval}retrieval: fetching only the notes that are {relevant}relevant to the current task."
+    },
+    {
+     "key": "s08_05",
+     "en": "A few short core rules are {always}always loaded, at the start of every session. {else}Everything else stays in the notebook until it's {needed}needed."
+    },
+    {
+     "key": "s08_06",
+     "topic": "search_notes example",
+     "en": "Rahul says: {deploy}Deploy the app to the test server."
+    },
+    {
+     "key": "s08_07",
+     "en": "The model replies with a {call}tool call to {search}search_notes, with the query: {query}deploy."
+    },
+    {
+     "key": "s08_08",
+     "en": "The harness {searches}searches the notebook. Out of {n300}300 notes, {two}2 match."
+    },
+    {
+     "key": "s08_09",
+     "en": "It adds a {tool}tool message with just those two notes, and the meter has {barely}barely moved."
+    },
+    {
+     "key": "s08_10",
+     "topic": "Memory is just another tool",
+     "en": "It's the {same}same tool-calling pattern as before. The model {requests}requests, the harness {does}does. Memory is just {another}another tool, plus a {place}place to store text."
+    },
+    {
+     "key": "s08_11",
+     "en": "There are {smarter}smarter ways to search notes than matching words. We'll meet those in a {later}later lesson."
+    }
+   ]
+  },
+  {
+   "key": "s09",
+   "chapter": {
+    "number": "09",
+    "title": "Full Replay: Two Sessions"
+   },
+   "plan_section": "09",
+   "lines": [
+    {
+     "key": "s09_01",
+     "topic": "Full replay: session 1",
+     "en": "Now let's put it all {together}together: one long task, across {two}two sessions."
+    },
+    {
+     "key": "s09_02",
+     "en": "Session {one}one. Rahul says: {fix}Fix all failing tests in this project. Don't rename public functions."
+    },
+    {
+     "key": "s09_03",
+     "en": "The model calls {run}run_command to run the tests. The output is very {long}long, so the harness {shortens}shortens it. That's technique {one}one."
+    },
+    {
+     "key": "s09_04",
+     "en": "Then {read}read_file, for lines 40 to 80 only. Technique one {again}again."
+    },
+    {
+     "key": "s09_05",
+     "en": "Then {edit}edit_file, and the file is {updated}updated."
+    },
+    {
+     "key": "s09_06",
+     "en": "The work goes {on}on, call after call. By call forty, the meter is at {pct}80%."
+    },
+    {
+     "key": "s09_07",
+     "topic": "Compaction in the replay",
+     "en": "{compaction}Compaction kicks in. That's technique {three}three. The older messages become one {summary}summary, and the meter {drops}drops to 25%."
+    },
+    {
+     "key": "s09_08",
+     "topic": "Saving notes before stopping",
+     "en": "The model finds out why the login tests {fail}fail, and calls {save}save_note: Login tests fail because of a wrong port in config.txt."
+    },
+    {
+     "key": "s09_09",
+     "en": "Rahul says: Let's {stop}stop for today. One more {save}save_note, with the {progress}progress: 6 of 8 tests pass. {next}Next: fix the port, then run tests."
+    },
+    {
+     "key": "s09_10",
+     "en": "The session {ends}ends. The notebook {keeps}keeps its notes."
+    },
+    {
+     "key": "s09_11",
+     "topic": "Session 2: continue from yesterday",
+     "en": "Session {two}two. The harness {loads}loads the notes. The meter is at just {pct}5%."
+    },
+    {
+     "key": "s09_12",
+     "en": "Rahul says: {continue}Continue from yesterday."
+    },
+    {
+     "key": "s09_13",
+     "en": "The model calls {read}read_file on config.txt. The result: {port}port = 8800. That's the {wrong}wrong port."
+    },
+    {
+     "key": "s09_14",
+     "en": "Then {edit}edit_file to fix the port, and {run}run_command to run the tests. All 8 tests {passed}passed."
+    },
+    {
+     "key": "s09_15",
+     "en": "And a final {answer}answer, with no tool call: All tests pass now. The last two failed because config.txt had the {wrong}wrong port. No public {functions}functions were renamed."
+    },
+    {
+     "key": "s09_16",
+     "topic": "What survived, and why",
+     "en": "Two things {survived}survived. The {rule}rule survived compaction, because the {summary}summary kept it."
+    },
+    {
+     "key": "s09_17",
+     "en": "And the {progress}progress survived the end of the session, because it was saved to {memory}memory."
+    }
+   ]
+  },
+  {
+   "key": "s10",
+   "chapter": {
+    "number": "10",
+    "title": "Reality Check: Memory Can Be Wrong"
+   },
+   "plan_section": "10",
+   "lines": [
+    {
+     "key": "s10_01",
+     "topic": "Reality check: memory can be wrong",
+     "en": "A {reality}reality check before we finish. Memory is useful, but it isn't {magic}magic."
+    },
+    {
+     "key": "s10_02",
+     "en": "{one}One: summaries lose {details}details. What a summary leaves out is {gone}gone."
+    },
+    {
+     "key": "s10_03",
+     "topic": "Out-of-date notes",
+     "en": "{two}Two: notes can be out of {date}date. A note says the server port is {p8080}8080, but config.txt now says {p9090}9090. If the agent {trusts}trusts the old note, it makes a {mistake}mistake."
+    },
+    {
+     "key": "s10_04",
+     "en": "Good agents {check}check important facts again."
+    },
+    {
+     "key": "s10_05",
+     "topic": "Wrong notes and private information",
+     "en": "{three}Three: notes can be {wrong}wrong from the start. A wrong conclusion, once saved, gets {repeated}repeated in later sessions."
+    },
+    {
+     "key": "s10_06",
+     "en": "{four}Four: memory can hold {private}private information. You should be able to {see}see what is saved, and {delete}delete it."
+    },
+    {
+     "key": "s10_07",
+     "en": "More memory is not {automatically}automatically better. Like context, the aim is the {right}right information at the right {time}time."
+    }
+   ]
+  },
+  {
+   "key": "s11",
+   "chapter": {
+    "number": "11",
+    "title": "Conclusion and What's Next"
+   },
+   "plan_section": "11",
+   "lines": [
+    {
+     "key": "s11_01",
+     "topic": "Recap",
+     "en": "Today we {solved}solved the problem from last time. The context window is {limited}limited, so the harness has to {choose}choose what the model sees."
+    },
+    {
+     "key": "s11_02",
+     "en": "It can keep tool results {small}small, drop old messages, or replace them with a {summary}summary."
+    },
+    {
+     "key": "s11_03",
+     "en": "And for anything that must {last}last longer than one conversation, it writes it down in {memory}memory, and brings it back when it's needed."
+    },
+    {
+     "key": "s11_04",
+     "en": "Remember the most {important}important point. The model itself {never}never remembers anything. It only {sees}sees the text that the harness gives it."
+    },
+    {
+     "key": "s11_05",
+     "topic": "Next: Planning",
+     "en": "But there is still {one}one thing we haven't looked at. So far, our agent decides just {step}one step at a time."
+    },
+    {
+     "key": "s11_06",
+     "en": "What happens when the goal is really {big}big, like building a whole {app}app? How does an agent {break}break a big goal into small steps, and keep {track}track of them?"
+    },
+    {
+     "key": "s11_07",
+     "en": "That's what we'll learn in the next lesson: {planning}Planning."
+    }
+   ]
+  }
+ ],
+ "excluded": []
+}
