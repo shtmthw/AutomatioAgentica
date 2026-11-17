@@ -19,7 +19,7 @@ Report any ✗ item with its remedy and stop if a critical one fails.
 
 ## 1. Start (new material) or continue (existing slug)
 
-- Read "Production guidelines" in `AGENTS.md` first. Before approval, raise anything the
+- Read "Production guidelines" in `AGENTS.md` first, and `local/GUIDELINES.md` if it exists. Before approval, raise anything the
   material conflicts with: no recap of all topics, a coding part that needs a real screen
   recording, dense stretches that need more visuals.
 - New: the user names a script file and a production plan (Markdown or text; convert
@@ -29,8 +29,9 @@ Report any ✗ item with its remedy and stop if a critical one fails.
   timeline (like Episode 02), add `--dub hi` (Hindi dubbed over the English master).
   Plan-required file names go under `[deliver.aliases]` in `production.toml`.
   Voices are **fixed for every video**: `hindi-adam` (Hindi) and `english-andrew` (English),
-  which are the defaults. Never pass `--voice`, never pick, add or swap a voice, and never edit
-  the voice profiles in `voices.toml`. If something seems to call for another voice, ask the user.
+  which are the defaults (or this operator's `[defaults]` in `local/voices.toml`; `doctor` shows
+  them). Never pass `--voice`, never pick, add or swap a voice, and never edit the voice profiles
+  in `voices.toml`. If something seems to call for another voice, ask the user.
   The user always supplies the production plan. If it's missing, ask for it; don't draft one.
 - Continue: `.venv/bin/python -m automatio status <slug>`.
 
@@ -72,7 +73,13 @@ will render or encode), then act on `state`:
 Repeat until `done`. Each `run` skips everything already done; paid lines are never
 paid for twice.
 
-## 3. Report
+## 3. Final checks (before reporting)
+
+Follow "Before calling a video final" in `AGENTS.md`: run `tools/voice_pauses.py <slug>` on
+every edge-tts version (then `run` again), and Read full-resolution frames of the final MP4s
+(ffmpeg `-ss <t> -frames:v 1`) at section starts and dense moments, not only the contact sheets.
+
+## 4. Report
 
 Read `output/<slug>/report.md` and `output/<slug>/manifest.json`, then tell the user:
 

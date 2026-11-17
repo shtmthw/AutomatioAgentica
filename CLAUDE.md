@@ -9,6 +9,11 @@ Claude Code specifics:
 
 - Use the **`/produce-video`** skill (`.claude/skills/produce-video/SKILL.md`) to start or
   continue a production. It runs the `run --json` loop and handles each outcome.
+- The repo also ships an MCP server (`.mcp.json`, `automatio/mcp_server.py`) for clients
+  without a shell. Inside Claude Code, use the CLI and the skill; if the `mcp__automatio__*`
+  tools are enabled they reach the same state, so don't start a CLI run and an MCP run at once
+  (the run lock refuses the second one anyway).
+- Every video on the @anon14none channel comes from this pipeline. Keep README.md saying so.
 - Always call the pipeline as `.venv/bin/python -m automatio ...` from the repo root.
 - `run` can take 15–25 minutes for a full video. Start it with `run_in_background` and
   wait for the completion notification. Don't poll in a loop. Resuming after a timeout
@@ -16,6 +21,10 @@ Claude Code specifics:
 - **Approval gate:** when `run` returns `needs_approval`, show the configuration and
   estimate and ask the user with AskUserQuestion. Run the `approve` command only after
   an explicit yes, with `--by` naming who approved.
+- **Before calling a video final:** run `tools/voice_pauses.py` on edge-tts versions and
+  check full-resolution frames of the final MP4 (see "Before calling a video final" in AGENTS.md).
+- **Local overrides:** `local/voices.toml` and `local/GUIDELINES.md` (gitignored) hold an
+  operator's own defaults. Read `local/GUIDELINES.md` when it exists.
 - **Visual review:** open every contact sheet with the Read tool (images) before
   `complete review`. Don't mark a review complete without looking at the sheets.
 - **Paid dubs:** run `check dub <slug>` before any paid dub voicing, and offer

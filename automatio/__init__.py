@@ -15,13 +15,14 @@ that only grant access to some folders):
     AA_OUTPUT_DIR       final deliverables                              ./output
     AA_VOICES_FILE      voice registry                                  ./voices.toml
     AA_ENV_FILE         credentials file (KEY=value lines)              ./.env
+    AA_LOCAL_DIR        operator overrides (voices.toml, GUIDELINES.md) ./local
 """
 from __future__ import annotations
 
 import os
 from pathlib import Path
 
-__version__ = "2.1.0"
+__version__ = "2.2.0"
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -49,3 +50,8 @@ def output_root() -> Path:
 
 def voices_file() -> Path:
     return _env_path("AA_VOICES_FILE", ROOT / "voices.toml")
+
+
+def local_dir() -> Path:
+    """Operator-specific overrides of this checkout (gitignored; see local/README.md)."""
+    return _env_path("AA_LOCAL_DIR", ROOT / "local")

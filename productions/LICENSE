@@ -1,0 +1,26 @@
+Copyright (c) 2026 anon14none. All rights reserved.
+
+This directory holds the productions of the @anon14none YouTube channel
+(https://www.youtube.com/@anon14none):
+
+  agentic-ai-intro          Episode 01: What is Agentic AI?
+  ep02-inside-the-agent     Episode 02: Inside an AI Agent: Who Actually Runs the Loop?
+  ep03-context-and-memory   Episode 03: Context and Memory: How an Agent Handles Long Tasks
+  ep04-planning             Episode 04: Planning: How an Agent Handles Big Goals
+  demo-tool-call            What is a tool call? (smoke test)
+
+and any later production that anon14none adds to this repository. It covers everything in
+those folders: scripts, production plans, notes, narration in every language, scene code
+(including scenes/thumbnail.py and the production kits such as memory_kit.py and
+plan_kit.py) and production settings. It also covers everything rendered from them: the
+videos, voice-overs, subtitles, thumbnails, chapters and topic lists.
+
+These productions are NOT covered by the MIT License of the AutomatioAgentica pipeline
+(../LICENSE). Without written permission from anon14none, you may not copy, modify,
+publish, distribute, sublicense or sell them, in whole or in part, or publish videos,
+translations or dubs made from them.
+
+You may read them here, and GitHub's Terms of Service let you view and fork this
+repository on GitHub. Read them to learn how the pipeline is used, then write your own
+script, plan and scenes in a production folder of your own. Productions you create
+yourself are yours: this notice does not apply to them.

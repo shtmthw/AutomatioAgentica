@@ -1,5 +1,47 @@
 # Changelog
 
+## 2.2.0 (2026-11-17)
+
+Anyone can pull the repository and run it from their own harness. Every video on the
+[@anon14none](https://www.youtube.com/@anon14none) channel was made with this pipeline.
+
+- **MCP server** (`automatio/mcp_server.py`, launcher `scripts/mcp_server.py`, entry point
+  `automatio-mcp`): 24 tools over the same CLI, so state, cache and the run lock are shared with
+  shell harnesses. `run` and `preview` start background jobs and return a `job_id` instead of
+  blocking (`wait` continues); jobs survive the client closing. `approve` needs
+  `confirmed_by_user` and also asks the user through MCP elicitation when the client supports it
+  (both the 2025-11-25 and 2026-07-28 protocols). Contact sheets and full-resolution video frames
+  come back as images. Scoped file tools are provided for clients without their own: read
+  anything but credentials and caches, write only `narration.json`, `production.toml` and
+  `scenes/`. CLI commands named in outcomes get `<field>_mcp` twins with the exact tool call.
+  Docs are MCP resources; `produce_video` is an MCP prompt.
+- **`mcp-config`** prints ready-to-paste configs (absolute paths) for Claude Code, Claude
+  Desktop, Codex, Cursor, VS Code and Gemini CLI. The repo ships `.mcp.json` (Claude Code
+  project server) and `GEMINI.md` (points Gemini CLI at `AGENTS.md`).
+- **One-command setup:** `scripts/setup.sh` installs the system packages (pacman, apt, dnf or
+  brew), creates the Python 3.12 venv with uv, installs the packages, creates `.env` from the
+  new `.env.example`, and runs `doctor` and the tests. `doctor` remedies now name the install
+  command for the machine's package manager, and it reports the `mcp` package and local overrides.
+- **Operator overrides (`local/`, gitignored):** `local/voices.toml` adds voice profiles under
+  new names (house profiles can't be redefined) and `[defaults]` picks the voices `new` uses;
+  `local/GUIDELINES.md` adds standing directions the agent reads. With an empty `local/` nothing
+  changes. `AA_LOCAL_DIR` moves the folder.
+- **Claude Code project settings** (`.claude/settings.json`): pipeline commands are allowed
+  without a prompt; `approve`, `say` and `clean` still ask; `.env` can't be read or edited.
+- **Episode 04 polish, built in:** render fingerprints include the voice clip timings
+  (`voice.timing_fp`), so clips polished in place re-render exactly the scenes timed to them;
+  `tools/voice_pauses.py` removes the stale voice manifests itself (a plain `run` then
+  rebuilds); English subtitle cues are segmented over the word timings by dynamic programming.
+- **Docs:** README rewritten for new users (setup, connecting a harness, costs, overrides);
+  AGENTS.md gains "Connecting a harness" and "Before calling a video final"; ANIMINFO.md gains
+  the lessons of Episodes 03 and 04.
+- **Licenses:** the pipeline is MIT (`LICENSE`). The @anon14none productions in `productions/`
+  and everything rendered from them stay all rights reserved (`productions/LICENSE`); `NOTICE`
+  maps which is which. Productions other people make with the pipeline are theirs.
+- Tests: `tests/test_mcp_server.py` (tool mapping, file sandbox, approval with and without
+  elicitation, the loop to a preview image over MCP, local overrides). A GitHub Actions workflow
+  runs setup and the whole suite on Ubuntu.
+
 ## 2.1.0 (2026-11-08)
 
 Lessons of Episode 02 ("Inside an AI Agent", English master + Hindi dub) built into the pipeline.

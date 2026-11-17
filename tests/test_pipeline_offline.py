@@ -77,7 +77,7 @@ class OfflinePipeline(unittest.TestCase):
         cls.tmp = Path(tempfile.mkdtemp(prefix="aa-test-"))
         cls.env = dict(os.environ, AA_PRODUCTIONS_DIR=str(cls.tmp / "productions"), AA_BUILD_DIR=str(cls.tmp / "build"),
                        AA_CACHE_DIR=str(cls.tmp / "cache"), AA_OUTPUT_DIR=str(cls.tmp / "output"),
-                       AA_ENV_FILE=str(cls.tmp / "no.env"))
+                       AA_ENV_FILE=str(cls.tmp / "no.env"), AA_LOCAL_DIR=str(cls.tmp / "local"))
         cls.env.pop("ELEVENLABS_API_KEY", None)
 
     @classmethod

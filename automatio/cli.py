@@ -12,6 +12,7 @@
     python -m automatio preview <slug> <section>[,<section>] [--lang hi] [--hq] [--audio] [--paid]
     python -m automatio say "text" [--voice hindi-adam]
     python -m automatio report <slug> | estimate <slug> | voices | clean <slug>
+    python -m automatio mcp-config [--client codex|claude-desktop|cursor|vscode|gemini|claude-code]
 
 Every command accepts --json: one JSON object on stdout (logs go to stderr), exit code
 0 done, 1 failed, 2 usage, 10 needs_agent, 11 needs_approval, 12 blocked, 13 locked.
@@ -90,7 +91,6 @@ DUB_TEMPLATE = '''
 max_speedup = 1.05
 anchors = []
 '''
-DEFAULT_VOICES = {"hi": "hindi-adam", "en": "english-andrew"}
 
 
 def cmd_new(a):
@@ -101,8 +101,9 @@ def cmd_new(a):
         raise InputError(f"production {a.slug!r} already exists at {rel(d)}",
                          remedy="Pick another slug, or pass --force to replace its inputs (narration and scenes "
                                 "are kept).")
-    from .config import load_voices
+    from .config import default_voices, load_voices
     voices = load_voices()
+    defaults = default_voices()
     langs = [l.strip() for l in a.languages.split(",") if l.strip()]
     dubs = {}
     for spec in a.dub or []:
@@ -122,7 +123,7 @@ def cmd_new(a):
         l, _, v = spec.partition("=")
         chosen[l] = v
     for l in langs:
-        v = chosen.get(l) or DEFAULT_VOICES.get(l)
+        v = chosen.get(l) or defaults.get(l)
         if not v or v not in voices:
             raise UsageError(f"no voice for {l!r}: pass --voice {l}=<profile> (profiles: {', '.join(voices)})")
         chosen[l] = v
@@ -483,6 +484,58 @@ def cmd_clean(a):
     return 0
 
 
+MCP_CLIENTS = ("claude-code", "claude-desktop", "codex", "cursor", "vscode", "gemini", "generic")
+
+
+def mcp_configs() -> dict:
+    """Ready-to-paste MCP server configs for this checkout (absolute paths, any working directory)."""
+    from . import ROOT
+    py = str(ROOT / ".venv" / "bin" / "python")
+    launcher = str(ROOT / "scripts" / "mcp_server.py")
+    std = {"command": py, "args": [launcher]}
+    tq = lambda v: json.dumps(v)                                     # TOML strings/arrays look like JSON here
+    return {
+        "claude-code": {"where": "terminal (or use the repo's .mcp.json when Claude Code runs in this folder)",
+                        "text": f"claude mcp add automatio --scope user -- {shlex_join([py, launcher])}"},
+        "claude-desktop": {"where": "Settings > Developer > Edit Config (claude_desktop_config.json)",
+                           "text": json.dumps({"mcpServers": {"automatio": std}}, indent=2)},
+        "codex": {"where": "~/.codex/config.toml",
+                  "text": f"[mcp_servers.automatio]\ncommand = {tq(py)}\nargs = {tq([launcher])}\n"
+                          "tool_timeout_sec = 120\n"},
+        "cursor": {"where": "~/.cursor/mcp.json (all projects) or .cursor/mcp.json",
+                   "text": json.dumps({"mcpServers": {"automatio": std}}, indent=2)},
+        "vscode": {"where": ".vscode/mcp.json in your workspace, or `MCP: Add Server` (user settings)",
+                   "text": json.dumps({"servers": {"automatio": {"type": "stdio", **std}}}, indent=2)},
+        "gemini": {"where": "~/.gemini/settings.json (merge into it)",
+                   "text": json.dumps({"mcpServers": {"automatio": {**std, "timeout": 120000}}}, indent=2)},
+        "generic": {"where": "any MCP client: a stdio server", "text": json.dumps(std, indent=2)},
+    }
+
+
+def shlex_join(parts) -> str:
+    import shlex
+    return shlex.join(parts)
+
+
+def cmd_mcp_config(a):
+    from . import ROOT
+    cfgs = mcp_configs()
+    pick = [a.client] if a.client else list(cfgs)
+    missing = [] if (ROOT / ".venv" / "bin" / "python").exists() else ["no .venv yet: run scripts/setup.sh first"]
+    try:
+        import mcp  # noqa: F401
+    except ImportError:
+        missing.append("the mcp package is missing: uv pip install --python .venv/bin/python -r pyproject.toml "
+                       "--extra mcp")
+    lines = [f"! {m}" for m in missing]
+    for k in pick:
+        lines += [f"## {k}  ({cfgs[k]['where']})", cfgs[k]["text"].rstrip(), ""]
+    lines.append("Then restart the client and ask it to call the `doctor` tool. Long runs return a job id; "
+                 "the agent calls `wait` until they finish.")
+    emit({"ok": not missing, "problems": missing, "configs": {k: cfgs[k] for k in pick}}, a.json, "\n".join(lines))
+    return 0
+
+
 def cmd_import_legacy(a):
     from . import ROOT
     from .config import load_voices
@@ -584,6 +637,10 @@ def build_parser():
     s.add_argument("production", nargs="?")
     s.add_argument("--build", action="store_true", help="also reset its build state (cache/output kept)")
     s.set_defaults(fn=cmd_clean)
+
+    s = sub.add_parser("mcp-config", parents=[common], help="print MCP client configs for this checkout")
+    s.add_argument("--client", choices=MCP_CLIENTS)
+    s.set_defaults(fn=cmd_mcp_config)
 
     s = sub.add_parser("import-legacy", parents=[common], help="adopt pre-2.0 voice clips into the cache")
     s.add_argument("--voice", default="hindi-adam")

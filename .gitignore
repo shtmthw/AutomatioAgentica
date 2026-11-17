@@ -23,3 +23,11 @@ output/
 .DS_Store
 .idea/
 .vscode/
+
+# Packaging (editable installs)
+*.egg-info/
+
+# Operator-specific overrides (see local/README.md): only the README and examples are tracked
+local/*
+!local/README.md
+!local/*.example.*

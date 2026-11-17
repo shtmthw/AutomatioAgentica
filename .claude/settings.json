@@ -1,0 +1,48 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(.venv/bin/python -m automatio doctor:*)",
+      "Bash(.venv/bin/python -m automatio status:*)",
+      "Bash(.venv/bin/python -m automatio next:*)",
+      "Bash(.venv/bin/python -m automatio task:*)",
+      "Bash(.venv/bin/python -m automatio new:*)",
+      "Bash(.venv/bin/python -m automatio run:*)",
+      "Bash(.venv/bin/python -m automatio check:*)",
+      "Bash(.venv/bin/python -m automatio complete:*)",
+      "Bash(.venv/bin/python -m automatio preview:*)",
+      "Bash(.venv/bin/python -m automatio report:*)",
+      "Bash(.venv/bin/python -m automatio estimate:*)",
+      "Bash(.venv/bin/python -m automatio voices:*)",
+      "Bash(.venv/bin/python -m automatio mcp-config:*)",
+      "Bash(.venv/bin/python -m unittest:*)",
+      "Bash(.venv/bin/python tools/voice_pauses.py:*)",
+      "mcp__automatio__doctor",
+      "mcp__automatio__list_productions",
+      "mcp__automatio__status",
+      "mcp__automatio__next_step",
+      "mcp__automatio__get_task",
+      "mcp__automatio__voices",
+      "mcp__automatio__estimate",
+      "mcp__automatio__report",
+      "mcp__automatio__check",
+      "mcp__automatio__wait",
+      "mcp__automatio__view_image",
+      "mcp__automatio__video_frame",
+      "mcp__automatio__list_files",
+      "mcp__automatio__read_file"
+    ],
+    "ask": [
+      "Bash(.venv/bin/python -m automatio approve:*)",
+      "Bash(.venv/bin/python -m automatio say:*)",
+      "Bash(.venv/bin/python -m automatio clean:*)",
+      "mcp__automatio__approve",
+      "mcp__automatio__say",
+      "mcp__automatio__clean",
+      "mcp__automatio__stop_run"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Edit(./.env)"
+    ]
+  }
+}

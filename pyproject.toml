@@ -1,6 +1,6 @@
 [project]
 name = "automatio-agentica"
-version = "2.1.0"
+version = "2.2.0"
 description = "Harness-driven video production pipeline: script + plan -> Hindi and English long-form videos (Manim animation, house voices, separate subtitles)"
 requires-python = ">=3.12,<3.13"
 dependencies = [
@@ -9,9 +9,19 @@ dependencies = [
     "numpy>=1.26",
     "soundfile>=0.12",
 ]
+license = "MIT"
+readme = "README.md"
+
+[project.optional-dependencies]
+mcp = ["mcp>=2.3,<3"]      # the MCP server (python -m automatio.mcp_server)
+
+[project.urls]
+Repository = "https://github.com/shtmthw/AutomatioAgentica"
+Channel = "https://www.youtube.com/@anon14none"
 
 [project.scripts]
 automatio = "automatio.cli:main"
+automatio-mcp = "automatio.mcp_server:main"
 
 [tool.setuptools]
 packages = ["automatio", "automatio.providers", "agentic_video"]

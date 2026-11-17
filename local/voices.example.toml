@@ -1,0 +1,40 @@
+# Your own voices. Copy to local/voices.toml (gitignored) and edit.
+#
+# Profiles here are added to the registry in ../voices.toml under new names. [defaults]
+# picks the profile `new` uses per language; without it `new` uses the house voices
+# (hindi-adam, english-andrew). Check the result with `python -m automatio voices`.
+
+[defaults]
+hi = "my-hindi"
+en = "my-english"
+
+# ElevenLabs: any voice your account may use through the API. Free accounts can use only
+# the built-in voices, not Voice Library voices (the API answers HTTP 402).
+[my-hindi]
+description = "My Hindi narrator"
+language = "hi"
+provider = "elevenlabs"
+voice_id = "REPLACE_WITH_VOICE_ID"
+voice_name = "My voice"
+model_id = "eleven_v4"
+language_code = "hi"
+stability = 0.5
+similarity_boost = 0.75
+output_format = "mp3_44100_128"
+context = true
+concurrency = 2
+credits_per_char = 1.0
+draft = "hindi-madhur-draft"           # free stand-in for the draft render (from ../voices.toml)
+
+[my-hindi.pronunciation]
+"AI" = "एआई"
+
+# edge-tts: free, no key. `edge-tts --list-voices` lists the voices.
+[my-english]
+description = "My English narrator (edge-tts, free)"
+language = "en"
+provider = "edge"
+voice = "en-US-GuyNeural"
+rate = "+0%"
+pitch = "+0Hz"
+latency = 0.045

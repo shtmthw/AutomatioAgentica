@@ -6,7 +6,8 @@ long-form videos in Hindi and English with separate English subtitle files: eith
 full versions (Episode 01) or one master video plus a dub on the same timeline (Episode 02,
 see [Dub versions](#dub-versions-one-video-a-second-voice-on-the-same-timeline)). This file is the contract between the pipeline and any harness
 (Claude Code, Codex, a custom agent runner, ...). Claude Code users: see also `CLAUDE.md`
-and the `/produce-video` skill.
+and the `/produce-video` skill. Every video on the [@anon14none](https://www.youtube.com/@anon14none)
+channel was made this way.
 
 ```
 User ──> Harness (you) ──> python -m automatio ──> Manim · ElevenLabs · edge-tts · ffmpeg ──> output/<slug>/
@@ -23,13 +24,16 @@ need to copy text between tools by hand.
 ## New session? Start here
 
 1. **Check the environment:** `.venv/bin/python -m automatio doctor` (add `--online`
-   before a run that will spend ElevenLabs credits). Report any ✗ with its remedy.
+   before a run that will spend ElevenLabs credits). Report any ✗ with its remedy. No
+   `.venv` yet? Tell the user to run `scripts/setup.sh` (it installs everything and runs
+   the checks).
 2. **See what exists:** `ls productions/`, then `.venv/bin/python -m automatio status <slug>`
    for anything in progress. `status` and `next` are read-only.
 3. **Continue a production:** run `.venv/bin/python -m automatio run <slug> --json` and act on
    the outcome (see [The loop](#the-loop)). It resumes exactly where the last session stopped.
 4. **New video:** the user gives a script and a production plan (any path). Read both,
-   then read [Production guidelines](#production-guidelines-from-the-user) below. Raise
+   then read [Production guidelines](#production-guidelines-from-the-user) below, and
+   `local/GUIDELINES.md` if it exists (this operator's own directions). Raise
    any guideline the material conflicts with (no recap, a coding section that needs a
    screen recording, ...) *before* approval. Then:
    `.venv/bin/python -m automatio new <slug> --script <file> --plan <file> --title "<title>"`
@@ -37,6 +41,10 @@ need to copy text between tools by hand.
 5. **Before writing scenes**, read `docs/SCENE_AUTHORING.md` and two or three scenes of
    the reference productions (`productions/agentic-ai-intro/scenes/`, and
    `productions/ep02-inside-the-agent/scenes/` for the "inside the agent" components).
+   Those productions are © anon14none, all rights reserved (`productions/LICENSE`); the
+   pipeline is MIT. Unless the user is anon14none (the @anon14none channel), learn from them
+   but don't copy their scripts, narration or scene code (including the `*_kit.py` files)
+   into another production: write new scenes with the MIT library in `agentic_video/`.
 6. **When done**, report from `output/<slug>/report.md`. It includes the chapter and topic
    timestamps of every version (guidelines 4 and 6), which the pipeline writes.
 
@@ -58,6 +66,30 @@ Reference material: `ANIMINFO.md` (what worked and failed in Episodes 01 and 02)
 
 Check the environment first: `python -m automatio doctor` (add `--online` to contact the
 providers; no credits are spent).
+
+## Connecting a harness: shell or MCP
+
+The same pipeline can be reached two ways, and both share one state, cache and run lock:
+
+- **Shell harnesses** (Claude Code, Codex, Cursor, Gemini CLI, Copilot agent mode, ...): open
+  the repository; the agent reads this file (`CLAUDE.md` and `GEMINI.md` point here) and
+  calls `.venv/bin/python -m automatio ... --json`.
+- **MCP clients** (Claude Desktop, any harness without a shell, or one used outside this
+  folder): run `.venv/bin/python -m automatio mcp-config` and paste the config it prints. The
+  server (`automatio/mcp_server.py`) offers a tool per command (`run`, `check`, `approve`,
+  `preview`, ...). Over MCP:
+  - `run` and `preview` never block: they return `state: "running"` with a `job_id` after
+    `wait_seconds`; call `wait` until the result arrives. Jobs survive the client closing.
+  - Every CLI command named in an outcome or task file has a `<field>_mcp` twin with the exact
+    tool call (`task.check` → `task.check_mcp`).
+  - `approve` needs `confirmed_by_user=true`, and when the client supports MCP elicitation
+    the server also asks the user itself. A decline there is final.
+  - Contact sheets come back as images (`preview`, `view_image`), and `video_frame` returns
+    a full-resolution frame of a finished video. If your client cannot show images, say the
+    visual review was not done by eye.
+  - Without file tools of your own, use `read_file`/`list_files` (anything but credentials
+    and caches) and `write_file`/`edit_file` (only `narration.json`, `production.toml` and
+    `scenes/` of a production).
 
 ## The loop
 
@@ -187,6 +219,11 @@ anchors = ["s06_03", ...]   # lines that must start with their master line (e.g.
   similar-sounding voice. If the voice seems to need changing, ask the user. (The only other
   voice is the free `hindi-madhur-draft` stand-in, which the pipeline uses by itself in the
   low-res draft and which never reaches a final video.)
+- **Operator defaults (`local/`):** another operator of this repository may define their own
+  voice profiles in `local/voices.toml` (new names only; house profiles can't be redefined)
+  and point `[defaults]` at them, so `new` uses those instead. `doctor` shows active
+  overrides. The same rules then apply to their voices: once a production is made, its
+  voices are fixed, never swapped by the agent, and any change needs a new approval.
 - The user supplies the script **and** the production plan. If either is missing, ask for
   it; don't write a plan yourself.
 - Subtitles are separate files only (`subtitles-en.srt` + `.vtt` for both versions).
@@ -197,7 +234,9 @@ anchors = ["s06_03", ...]   # lines that must start with their master line (e.g.
 ## Production guidelines (from the user)
 
 These are the user's standing directions for every video. Apply them unless a plan
-explicitly says otherwise.
+explicitly says otherwise. If `local/GUIDELINES.md` exists, it holds this operator's own
+directions: read it too, and where it disagrees with the list below, it wins. The production
+rules above still apply either way.
 
 1. **No burned-in subtitles: subtitles only as separate files.** The final MP4s carry
    picture and sound only. Never add an `ass`/`subtitles` filter, never mux a subtitle
@@ -244,6 +283,25 @@ explicitly says otherwise.
    regenerates it on every delivery (it warns while a production has no topics). The recap
    (guideline 5) should cover the same topics.
 
+## Before calling a video final (lessons of Episodes 03 and 04)
+
+The checks pass on things a viewer still notices. Do these before reporting a video as done:
+
+- **Polish free-voice pauses.** For every edge-tts version (the English house voice), run
+  `.venv/bin/python tools/voice_pauses.py <slug> --dry-run`, then without `--dry-run`, then
+  `run` again. edge-tts holds ~0.5 s at commas and hesitates mid-phrase, which sounds like
+  stutter. The tool shortens only silences, drops the stale voice manifests itself, and the
+  renders timed to the old clips are redone. Paid clips are never touched.
+- **Look at full-resolution frames, not only the 480p contact sheets.** Extract frames of
+  the final MP4 (e.g. `ffmpeg -ss <t> -i output/<slug>/english/final-video.mp4 -frames:v 1
+  frame.png`, or the MCP `video_frame` tool) at each section start and wherever a dense
+  scene changes. Small-text overlaps, misdirected arrows and glitches show up only there.
+- **Read the subtitles against the voice.** Open `subtitles-en.srt` and check that no cue
+  breaks mid-phrase awkwardly and that cue timing follows the speech.
+- **edge-tts sometimes answers 503.** Just run again: finished clips are cached.
+- **New components go next to the production's scenes** (`scenes/memory_kit.py`,
+  `scenes/plan_kit.py`), not into `agentic_video/`, so earlier episodes are not re-rendered.
+
 ## Commands
 
 ```
@@ -259,6 +317,7 @@ complete review <slug> --notes "..."
 preview <slug> <section>[,<section>] [--lang hi|en|all] [--hq] [--audio] [--paid]
 say "text" --voice hindi-adam       audition pronunciation (cached; ElevenLabs spends credits)
 estimate <slug> | report <slug> | voices | clean <slug> [--build]
+mcp-config [--client codex|claude-desktop|cursor|vscode|gemini|claude-code]   MCP client config for this checkout
 ```
 
 Production settings worth knowing (all optional, defaults in `automatio/config.py`):

@@ -9,7 +9,7 @@ import tomllib
 from dataclasses import dataclass, field, fields
 from pathlib import Path
 
-from . import build_root, output_root, productions_dir, voices_file
+from . import build_root, local_dir, output_root, productions_dir, voices_file
 from .errors import ConfigError, InputError
 
 ISO639_2 = {"hi": "hin", "en": "eng", "bn": "ben", "ur": "urd", "ta": "tam", "te": "tel", "mr": "mar",
@@ -40,14 +40,55 @@ class VoiceProfile:
 _PROFILE_META = {"language", "provider", "pronunciation", "draft", "description"}
 
 
+HOUSE_DEFAULTS = {"hi": "hindi-adam", "en": "english-andrew"}     # the voices of every @anon14none video
+
+
+def local_voices_file() -> Path:
+    return local_dir() / "voices.toml"
+
+
+def _read_toml(path: Path) -> dict:
+    try:
+        return tomllib.loads(path.read_text(encoding="utf-8"))
+    except tomllib.TOMLDecodeError as e:
+        raise ConfigError(f"{path.name}: {e}") from e
+
+
 def load_voices(path: Path | None = None) -> dict[str, VoiceProfile]:
+    """The voice registry: voices.toml, plus the operator's own profiles from local/voices.toml.
+    Local profiles get new names; a house profile is never redefined (its settings are part of
+    every cached clip's key and of the house sound)."""
+    explicit = path is not None
     path = Path(path or voices_file())
     if not path.exists():
         raise ConfigError(f"voice registry not found: {path}", remedy="Restore voices.toml from git.")
-    try:
-        data = tomllib.loads(path.read_text(encoding="utf-8"))
-    except tomllib.TOMLDecodeError as e:
-        raise ConfigError(f"{path.name}: {e}") from e
+    out = _profiles(path, _read_toml(path))
+    loc = local_voices_file()
+    if not explicit and loc.exists():
+        extra = _profiles(loc, {k: v for k, v in _read_toml(loc).items() if k != "defaults"})
+        clash = sorted(set(extra) & set(out))
+        if clash:
+            raise ConfigError(f"{loc}: profile(s) {', '.join(clash)} already exist in voices.toml",
+                              remedy="Give your own voices new names (e.g. my-hindi); house profiles are "
+                                     "never redefined. Point [defaults] at them to make them the defaults of `new`.")
+        out.update(extra)
+    return out
+
+
+def default_voices() -> dict[str, str]:
+    """Voice profile per language that `new` uses: the house voices, or the operator's
+    [defaults] from local/voices.toml."""
+    out = dict(HOUSE_DEFAULTS)
+    loc = local_voices_file()
+    if loc.exists():
+        d = _read_toml(loc).get("defaults", {})
+        if not isinstance(d, dict) or not all(isinstance(v, str) for v in d.values()):
+            raise ConfigError(f"{loc}: [defaults] maps a language to a profile name, e.g. hi = \"my-hindi\"")
+        out.update(d)
+    return out
+
+
+def _profiles(path: Path, data: dict) -> dict[str, VoiceProfile]:
     out = {}
     for name, d in data.items():
         if not isinstance(d, dict):

@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "automatio": {
+      "type": "stdio",
+      "command": ".venv/bin/python",
+      "args": ["scripts/mcp_server.py"]
+    }
+  }
+}

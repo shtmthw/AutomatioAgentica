@@ -1,11 +1,14 @@
-# ANIMINFO: the production playbook (Episodes 01 and 02)
+# ANIMINFO: the production playbook (Episodes 01 to 04)
 
 A playbook for producing this project's lessons again from scratch. Sections 1–11 cover
 Episode 01, "What is Agentic AI?": a ~10–11 minute beginner lesson with **Hindi narration**
 (ElevenLabs), **English subtitles**, **English on-screen text**, and **100% programmatic
 animation**. [Section 12](#12-episode-02-inside-an-ai-agent-english-master--hindi-dub)
 covers Episode 02, "Inside an AI Agent": one English video plus a Hindi voice-over fitted
-to its timeline. Each part covers what worked, what failed, and the path to follow.
+to its timeline. [Section 13](#13-episodes-03-and-04-english-first-and-the-polish-pass)
+covers Episodes 03 and 04 (English first, then a polish pass). Each part covers what worked,
+what failed, and the path to follow. These are the videos of the
+[@anon14none](https://www.youtube.com/@anon14none) channel.
 
 > **2.x:** this runs as a harness-driven pipeline (`python -m automatio`, see
 > [AGENTS.md](AGENTS.md)): Hindi + English versions (each timed to its own narration, or
@@ -298,3 +301,38 @@ step, at most 5 %.
   regenerates them (byte-identical to the hand-made ones) from `topic` fields and
   `[deliver]` settings, so they can't go stale.
 
+---
+
+## 13. Episodes 03 and 04: English first, and the polish pass
+
+Episode 03 ("Context and Memory", 13:12) and Episode 04 ("Planning", 13:25) were produced
+English-only at the user's request. Their Hindi comes later as a dub on the same timeline
+(`[versions.hi] mode = "dub"`, `follow = "en"`), which never re-renders the English video or
+invalidates its review. Decisions per episode: `productions/<slug>/inputs/notes-1.md`.
+
+- **The checks pass on things the user still notices.** After Episode 04 was "done", the user
+  asked to "fix the stuttery voice, animation bugs, perfectly timed subtitles". All three were
+  invisible to the automated verification and to the 480p contact sheets:
+  - *Stutter:* edge-tts Andrew holds ~0.5 s at commas and colons and sometimes hesitates
+    mid-phrase. `tools/voice_pauses.py` shortens only the silences inside the cached clips
+    (comma 0.30 s, mid-phrase 0.10 s, sentence 0.60 s, 5 ms crossfades) and shifts the word
+    timings. It now deletes the stale voice manifests itself, and render fingerprints include
+    the clip timings (`voice.timing_fp`), so a plain `run` redoes exactly the renders timed to
+    the old clips. Run it on every edge-tts production before calling it final.
+  - *Animation bugs:* overlaps of small text and arrows pointing at the wrong card only show
+    at full resolution. Extract frames of the final MP4 at each section start and at dense
+    moments (`ffmpeg -ss <t> -i final-video.mp4 -frames:v 1 f.png`, or the MCP `video_frame`
+    tool) and look at them.
+  - *Subtitles:* English cues are now segmented by dynamic programming over the line's word
+    timings (`subtitles.segment`: ~56 characters per cue, none shorter than ~18), and each
+    cue is shown from its first to its last word.
+- **Components stay next to the scenes.** `memory_kit.py` (Episode 03) and `plan_kit.py`
+  (Episode 04: `PlanPanel`, `GoalCard`, `StepRow`, `StepCounter`) live in the production's
+  `scenes/`. `PlanPanel.apply(...)` refuses to run unless the `update_plan` call card is on
+  screen, so the plan can only change visibly through the harness. `call_msg`/`res_msg` wrap
+  long text instead of shrinking it.
+- **A script drafted from the plan is locked by the user at approval.** When a plan gives
+  ideas and required lines but no full script, the English script is drafted keeping the
+  required lines word for word. The user reviews it before anything renders, and later trims
+  are theirs (Episode 04 was cut by ~160 words to stay under the plan's 14:00 cap).
+- **edge-tts returns 503 now and then.** Run again; finished clips are cached.

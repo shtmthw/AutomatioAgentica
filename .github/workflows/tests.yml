@@ -1,0 +1,21 @@
+# Fresh-clone check: what a new user gets from `git clone` + `scripts/setup.sh`.
+name: tests
+
+on:
+  push:
+    branches: [master, Development]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  setup-and-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup (system packages, uv, venv, packages, doctor)
+        run: scripts/setup.sh --yes --no-tests
+      - name: Tests (offline: tone voices, real renders, MCP server)
+        run: .venv/bin/python -m unittest discover -s tests -v
+      - name: MCP client configs
+        run: .venv/bin/python -m automatio mcp-config --client generic

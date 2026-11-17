@@ -1,0 +1,18 @@
+AutomatioAgentica
+Copyright (c) 2026 anon14none
+
+This repository contains two kinds of material under two different licenses.
+
+1. The AutomatioAgentica pipeline: MIT License (see LICENSE). Open source.
+   automatio/, agentic_video/, scripts/, tools/, tests/, docs/, local/ (README and examples),
+   voices.toml, pyproject.toml, the harness files (AGENTS.md, CLAUDE.md, GEMINI.md, .claude/,
+   .mcp.json, .github/) and the other top-level documents.
+
+2. The productions of the @anon14none YouTube channel: all rights reserved
+   (see productions/LICENSE).
+   productions/agentic-ai-intro, productions/ep02-inside-the-agent,
+   productions/ep03-context-and-memory, productions/ep04-planning, productions/demo-tool-call,
+   any later production added by anon14none, and every video, voice-over, subtitle file,
+   thumbnail and other output rendered from them.
+
+Productions that you create with the pipeline are yours.
