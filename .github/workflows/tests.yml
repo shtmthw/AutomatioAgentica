@@ -13,9 +13,9 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
-      - name: Setup (system packages, uv, venv, packages, doctor)
+      - name: "Setup (system packages, uv, venv, packages, doctor)"
         run: scripts/setup.sh --yes --no-tests
-      - name: Tests (offline: tone voices, real renders, MCP server)
+      - name: "Tests (offline: tone voices, real renders, MCP server)"
         run: .venv/bin/python -m unittest discover -s tests -v
-      - name: MCP client configs
+      - name: "MCP client configs"
         run: .venv/bin/python -m automatio mcp-config --client generic
