@@ -418,7 +418,7 @@ class Pipeline:
         for l in langs:
             man = read_json(mans[l])
             fps[l] = fingerprint(kind, man["fingerprint"], self.scenes_fp(), self.render_narr_fp(),
-                                 R.resolution(self.prod, kind), self.prod.audio.line_gap)
+                                 R.resolution(self.prod, kind), self.prod.audio.line_gap, V.timing_fp(man))
             sid = self._sid(kind, l)
             if force or not (self.state.fresh(sid, fps[l]) and R.index_path(self.prod, l, kind).exists()):
                 todo.append(l)
@@ -474,7 +474,7 @@ class Pipeline:
         for l in self.prod.full_langs:
             man = read_json(V.manifest_path(self.prod, l, draft=True))
             exp = fingerprint("draft", man["fingerprint"], self.scenes_fp(), self.render_narr_fp(),
-                              R.resolution(self.prod, "draft"), self.prod.audio.line_gap)
+                              R.resolution(self.prod, "draft"), self.prod.audio.line_gap, V.timing_fp(man))
             if exp != self.state.stage(f"draft:render:{l}").get("fingerprint"):
                 raise ValidationFailed("scenes or narration changed after the draft was rendered; run the "
                                        "pipeline (it re-renders the draft) and review the new sheets")

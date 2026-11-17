@@ -1,0 +1,632 @@
+{
+ "schema": "automatio.narration/1",
+ "title": "Planning: How an Agent Handles Big Goals",
+ "source_language": "en",
+ "sections": [
+  {
+   "key": "s01",
+   "chapter": {
+    "number": "01",
+    "title": "Busy, but Lost"
+   },
+   "plan_section": "01",
+   "lines": [
+    {
+     "key": "s01_01",
+     "en": "Welcome back. Let's {rebuild}rebuild what we've learned so far, one piece at a time.",
+     "topic": "Recap: loop, harness, messages, context, memory"
+    },
+    {
+     "key": "s01_02",
+     "en": "First, {loop}the loop. An agent works in a loop: {decide}decide, {act}act, {observe}observe, {evaluate}evaluate, and {repeat}repeat."
+    },
+    {
+     "key": "s01_03",
+     "en": "At the centre is the {model}model, which only writes {text}text. The {harness}harness, the program around it, actually {runs}runs the tools."
+    },
+    {
+     "key": "s01_04",
+     "en": "The conversation is a {list}list of messages. On {every}every call, the harness sends the {whole}whole conversation to the model again."
+    },
+    {
+     "key": "s01_05",
+     "en": "But the {cw}context window is {limited}limited, so the harness trims or {summarizes}summarizes old messages."
+    },
+    {
+     "key": "s01_06",
+     "en": "And what must last longer is saved in {memory}memory, and {back}brought back later."
+    },
+    {
+     "key": "s01_07",
+     "en": "{loop}Loop, {model}model, {harness}harness, {messages}messages, {context}context and {memory}memory. That's our agent {so}so far."
+    },
+    {
+     "key": "s01_08",
+     "en": "Now let's give it a bigger job.",
+     "topic": "Hook: sixty calls, half the job missing"
+    },
+    {
+     "key": "s01_09",
+     "en": "Rahul {asks}asks: Add a contact form to my website. It should {save}save every message and show a thank-you note."
+    },
+    {
+     "key": "s01_10",
+     "en": "The agent gets to {work}work. {c10}Call ten. {c30}Call thirty. {c60}Call sixty. {after}Tool call after tool call."
+    },
+    {
+     "key": "s01_11",
+     "en": "Finally, it reports: {done}Done! The contact form is ready."
+    },
+    {
+     "key": "s01_12",
+     "en": "Let's {check}check what Rahul asked for. {form}A form page: {form_v}yes. {saving}Saving every message: {saving_v}no. {thank}A thank-you note: {thank_v}no."
+    },
+    {
+     "key": "s01_13",
+     "en": "{sixty}Sixty steps of hard work. So {why}why is half the job missing?"
+    },
+    {
+     "key": "s01_14",
+     "en": "Our agent wasn't {lazy}lazy. It worked {hard}hard at every step."
+    },
+    {
+     "key": "s01_15",
+     "en": "But it only ever looked {one}one step ahead, and along the way, it {lost}lost sight of the whole job."
+    },
+    {
+     "key": "s01_16",
+     "en": "Today, we {fix}fix that. Today's lesson: {title}planning."
+    }
+   ]
+  },
+  {
+   "key": "s02",
+   "chapter": {
+    "number": "02",
+    "title": "Why One Step at a Time Is Not Enough"
+   },
+   "plan_section": "02",
+   "lines": [
+    {
+     "key": "s02_01",
+     "en": "What does {one}one step at a time mean? On {each}each call, the model {looks}looks at the conversation so far, and {picks}picks the next action.",
+     "topic": "Why one step at a time fails"
+    },
+    {
+     "key": "s02_02",
+     "en": "For {small}small tasks, that works well. Like finding which {port}port the server uses: {read}read one file, and {answer}answer."
+    },
+    {
+     "key": "s02_03",
+     "en": "But on {big}big goals, it fails in {three}three ways."
+    },
+    {
+     "key": "s02_04",
+     "en": "One: it {forgets}forgets parts of the goal. As the list {grows}grows, it keeps working on part one, and {never}never gets back to parts two and three."
+    },
+    {
+     "key": "s02_05",
+     "en": "Two: the wrong {order}order. It {writes}writes the code that saves messages before {looking}looking at how the website is built, and that work is {thrown}thrown away."
+    },
+    {
+     "key": "s02_06",
+     "en": "Three: it doesn't know what {finished}finished means. So it either says done {soon}too soon, or keeps polishing {forever}forever."
+    },
+    {
+     "key": "s02_07",
+     "en": "It's like {cooking}cooking a big meal without a recipe. You're {busy}busy the whole time, but the {rice}rice burns while you chop {onions}onions, and you forget the {salad}salad.",
+     "topic": "Analogy: cooking without a recipe"
+    },
+    {
+     "key": "s02_08",
+     "en": "A {person}person would solve this by writing a {list}list first. An {agent}agent does exactly the same thing."
+    }
+   ]
+  },
+  {
+   "key": "s03",
+   "chapter": {
+    "number": "03",
+    "title": "What Is a Plan?"
+   },
+   "plan_section": "03",
+   "lines": [
+    {
+     "key": "s03_01",
+     "en": "A {plan}plan is a {list}list of steps to reach a goal.",
+     "topic": "What a plan is"
+    },
+    {
+     "key": "s03_02",
+     "en": "We give the model Rahul's {goal}goal, and ask it to write a plan {first}first. It {replies}replies with an ordinary assistant message, in {plain}plain text."
+    },
+    {
+     "key": "s03_03",
+     "en": "{one}One: look at how the website is organized. {two}Two: create the contact form page. {three}Three: save each submitted message. {four}Four: show a thank-you note after sending. {five}Five: test the whole thing."
+    },
+    {
+     "key": "s03_04",
+     "en": "Notice what this is: {ordinary}ordinary text, written by the {model}model, just like any other {reply}reply."
+    },
+    {
+     "key": "s03_05",
+     "en": "There's no {special}special planning part added to the model. It's the {same}same model as before."
+    },
+    {
+     "key": "s03_06",
+     "en": "What {changes}changes is the {first}first thing we ask it to do: {before}before acting, write down the steps."
+    },
+    {
+     "key": "s03_07",
+     "en": "And that simple idea {helps}helps. The {whole}whole job is visible at once, so no part gets {forgotten}forgotten.",
+     "topic": "Why a plan helps"
+    },
+    {
+     "key": "s03_08",
+     "en": "The {order}order is decided before any work starts. And {finished}finished means {every}every step is done."
+    },
+    {
+     "key": "s03_09",
+     "en": "A plan is {just}just text. But it is text that keeps the agent on {track}track."
+    }
+   ]
+  },
+  {
+   "key": "s04",
+   "chapter": {
+    "number": "04",
+    "title": "Breaking a Big Goal Into Good Steps"
+   },
+   "plan_section": "04",
+   "lines": [
+    {
+     "key": "s04_01",
+     "en": "{breaking}Breaking a big goal into smaller steps has a name: {decomposition}decomposition.",
+     "topic": "Decomposition"
+    },
+    {
+     "key": "s04_02",
+     "en": "Our goal splits into {five}five steps. But what makes a step a {good}good one? {three}Three things."
+    },
+    {
+     "key": "s04_03",
+     "en": "First, it's {small}small. {bad}Build the form and everything it needs is too big. {good}Create the contact form page is one clear piece of work.",
+     "topic": "Good steps: small, clear, checkable"
+    },
+    {
+     "key": "s04_04",
+     "en": "Second, it's {clear}clear. {bad}Handle the messages could mean anything. {good}Save each submitted message says exactly what to do."
+    },
+    {
+     "key": "s04_05",
+     "en": "Third, it's {checkable}checkable. {bad}Make sure it works well can't be checked. {good}Run the tests and confirm they pass can."
+    },
+    {
+     "key": "s04_06",
+     "en": "For every step, there should be a way to {see}see that it's finished, like a {file}file that exists, or a {test}test that passes."
+    },
+    {
+     "key": "s04_07",
+     "en": "Steps also have an {order}order. {looking}Looking at the website comes before building the form. And {testing}testing comes last.",
+     "topic": "Order of steps"
+    },
+    {
+     "key": "s04_08",
+     "en": "{remember}Remember the wrong order from before? Now the agent looks at the website {first}first."
+    },
+    {
+     "key": "s04_09",
+     "en": "And a plan should be the right {size}size. {little}Too little, like build the contact form, just {repeats}repeats the goal. It doesn't help.",
+     "topic": "The right size of plan"
+    },
+    {
+     "key": "s04_10",
+     "en": "{much}Too much, like {forty}forty tiny steps such as open file and move cursor, is long and {wasteful}wasteful. And it {breaks}breaks as soon as anything changes."
+    },
+    {
+     "key": "s04_11",
+     "en": "{about}About right is {five}five to seven meaningful steps."
+    }
+   ]
+  },
+  {
+   "key": "s05",
+   "chapter": {
+    "number": "05",
+    "title": "Where Does the Plan Live?"
+   },
+   "plan_section": "05",
+   "lines": [
+    {
+     "key": "s05_01",
+     "en": "So {where}where does the plan live? Right now, it's just an {assistant}assistant message, {early}early in the conversation.",
+     "topic": "A plan as an old message gets lost"
+    },
+    {
+     "key": "s05_02",
+     "en": "But the message list {grows}grows, and the context window {fills}fills up."
+    },
+    {
+     "key": "s05_03",
+     "en": "Old messages are {trimmed}trimmed, and the plan {slides}slides out of the window. The plan is {gone}gone, and the agent {drifts}drifts."
+    },
+    {
+     "key": "s05_04",
+     "en": "The plan {shouldn}shouldn't be just another old message. So the {harness}harness gives the model a {tool}tool for it.",
+     "topic": "The update_plan tool and the plan panel"
+    },
+    {
+     "key": "s05_05",
+     "en": "{one}Step one: Rahul sends his {goal}goal. The harness {passes}passes it to the model, along with the {tools}tool descriptions."
+    },
+    {
+     "key": "s05_06",
+     "en": "One of them is {new}new: update_plan. It {creates}creates or updates the list of steps. The name is just an {example}example."
+    },
+    {
+     "key": "s05_07",
+     "en": "{two}Step two: the model replies with a {call}tool call. {tool}The tool is update_plan, and the {input}input is the five steps."
+    },
+    {
+     "key": "s05_08",
+     "en": "{three}Step three: the harness executes it. The {goal}goal and the five steps appear in the {none}plan panel."
+    },
+    {
+     "key": "s05_09",
+     "en": "{four}Step four: the harness adds a tool message: {saved}Plan saved."
+    },
+    {
+     "key": "s05_10",
+     "en": "{five}Step five: from now on, every call carries the {messages}messages, the {tools}tool descriptions, and the {plan}current plan."
+    },
+    {
+     "key": "s05_11",
+     "en": "Why is this {better}better? First, it {survives}survives. Old messages are {trimmed}trimmed, but the plan is {untouched}untouched, because the harness stores it {separately}separately.",
+     "topic": "Why the harness keeps the plan"
+    },
+    {
+     "key": "s05_12",
+     "en": "Second, the model {current}always sees the {latest}latest version. Third, {rahul}Rahul can watch the {progress}progress too."
+    },
+    {
+     "key": "s05_13",
+     "en": "Same {pattern}pattern again: the model doesn't {remember}remember the plan. The harness {keeps}keeps it and {back}brings it back, like {memory}memory."
+    }
+   ]
+  },
+  {
+   "key": "s06",
+   "chapter": {
+    "number": "06",
+    "title": "Working Through the Plan"
+   },
+   "plan_section": "06",
+   "lines": [
+    {
+     "key": "s06_01",
+     "en": "Now the most {important}important part: how the agent {works}works through the plan.",
+     "topic": "The loop with a plan"
+    },
+    {
+     "key": "s06_02",
+     "en": "First, what hasn't {changed}changed: the {loop}loop is the same, and the model still decides {one}one action per call."
+    },
+    {
+     "key": "s06_03",
+     "en": "The only difference: the {plan}plan is now in front of it, {every}every time."
+    },
+    {
+     "key": "s06_04",
+     "en": "Let's follow {one}step one closely: {look}look at how the website is organized."
+    },
+    {
+     "key": "s06_05",
+     "en": "First, {pick}pick the next step. The model {reads}reads the plan, and {calls}calls update_plan to mark step one as in progress. The harness {applies}applies it.",
+     "topic": "One step in detail: pick, do, check, mark"
+    },
+    {
+     "key": "s06_06",
+     "en": "Second, do the {work}work with normal tool calls: {run}run_command lists the files, and {read}read_file reads index.html."
+    },
+    {
+     "key": "s06_07",
+     "en": "Decide, act, observe, once for each tool call."
+    },
+    {
+     "key": "s06_08",
+     "en": "Third, {check}check the result: now it {knows}knows where the pages are kept."
+    },
+    {
+     "key": "s06_09",
+     "en": "Fourth, {mark}mark it done. {another}Another update_plan call, and the harness puts a {tick}tick on step one."
+    },
+    {
+     "key": "s06_10",
+     "en": "Fifth, {move}move on. The next call starts with {two}step two."
+    },
+    {
+     "key": "s06_11",
+     "en": "{steps}Steps two and three follow the same {rhythm}rhythm. {progress}In progress, {work}work, {check}check, {done}done."
+    },
+    {
+     "key": "s06_12",
+     "en": "Now, a {closer}closer look at done, with {two}two versions of {five}step five.",
+     "topic": "Done means checked: evidence"
+    },
+    {
+     "key": "s06_13",
+     "en": "On the left, the model {edits}edits a file and {marks}marks step five done at once. {no}No test was run. {said}Said, not checked."
+    },
+    {
+     "key": "s06_14",
+     "en": "On the right, it {calls}calls run_command to run the tests first. {result}All tests passed. {only}Only then is the step marked done. {checked}Checked."
+    },
+    {
+     "key": "s06_15",
+     "en": "A tick in the plan is only a {claim}claim, written by the model. The tool result is the {proof}proof."
+    },
+    {
+     "key": "s06_16",
+     "en": "A good agent, and a well-built harness, {tie}tie every done to real evidence. That's why steps must be {checkable}checkable."
+    },
+    {
+     "key": "s06_17",
+     "en": "Done means {checked}checked, not just {said}said."
+    }
+   ]
+  },
+  {
+   "key": "s07",
+   "chapter": {
+    "number": "07",
+    "title": "Replanning: When the Plan Meets Reality"
+   },
+   "plan_section": "07",
+   "lines": [
+    {
+     "key": "s07_01",
+     "en": "The plan was {written}written before the {looked}work began. So it's a best {guess}guess, and {tool}tool results will tell the agent new things.",
+     "topic": "The plan is a best guess"
+    },
+    {
+     "key": "s07_02",
+     "en": "{changing}Changing the plan because of what the agent has learned is called {replanning}replanning.",
+     "topic": "Replanning: adding a step"
+    },
+    {
+     "key": "s07_03",
+     "en": "On {three}step three, save each submitted message, the model {calls}calls run_command to search for where data is stored."
+    },
+    {
+     "key": "s07_04",
+     "en": "The {result}result: No storage found in this project. But the plan {assumed}assumed there was one."
+    },
+    {
+     "key": "s07_05",
+     "en": "So the model {calls}calls update_plan to add a new step before step three: {create}create a file to store messages."
+    },
+    {
+     "key": "s07_06",
+     "en": "The harness {applies}applies it. Now there are {six}six steps, and the loop {continues}continues."
+    },
+    {
+     "key": "s07_07",
+     "en": "Some choices shouldn't be made {alone}alone: a {file}simple file, or a {database}database that needs new software?",
+     "topic": "Asking the user instead of guessing"
+    },
+    {
+     "key": "s07_08",
+     "en": "That affects Rahul's project, so the model {asks}asks: {should}Should I store messages in a simple file, or set up a database?"
+    },
+    {
+     "key": "s07_09",
+     "en": "The loop {pauses}pauses. {rahul}Rahul answers: A {simple}simple file is fine."
+    },
+    {
+     "key": "s07_10",
+     "en": "And {if}if the website already showed a thank-you note, the model would {ask}ask update_plan to {remove}remove that step."
+    },
+    {
+     "key": "s07_11",
+     "en": "{add}Add a step, {change}change a step, {remove}remove a step. A plan is a {guide}guide, not a {script}script.",
+     "topic": "A guide, not a script"
+    },
+    {
+     "key": "s07_12",
+     "en": "{avoid}Avoid two failures. {never}Never replanning: following a broken plan into a {wall}wall.",
+     "topic": "Never vs always replanning"
+    },
+    {
+     "key": "s07_13",
+     "en": "{always}Always replanning: {rewrites}rewriting the plan every step, and never making {progress}progress."
+    }
+   ]
+  },
+  {
+   "key": "s08",
+   "chapter": {
+    "number": "08",
+    "title": "Showing the Plan to a Human First"
+   },
+   "plan_section": "08",
+   "lines": [
+    {
+     "key": "s08_01",
+     "en": "The {cheapest}cheapest moment to fix a mistake is {before}before any work is done.",
+     "topic": "Approval before the work starts"
+    },
+    {
+     "key": "s08_02",
+     "en": "Rahul gives his {goal}goal, and the model {writes}writes the plan with update_plan. {before}Before any other tool runs, the harness asks Rahul: {start}Start with this plan?"
+    },
+    {
+     "key": "s08_03",
+     "en": "Rahul {spots}spots something missing: {also}Also send me an email when someone writes. The model {calls}calls update_plan to add that step. Then Rahul {approves}approves, and the {loop}loop begins."
+    },
+    {
+     "key": "s08_04",
+     "en": "{without}Without approval, Rahul finds the gap after {sixty}sixty calls, and much of the work is {redone}redone. {with}With approval, it's caught in the {first}first minute.",
+     "topic": "Without vs with approval"
+    },
+    {
+     "key": "s08_05",
+     "en": "This is human {oversight}oversight again. When to ask is a {choice}choice built into the harness by its {developer}developer. {small}Small, low-risk tasks may skip it."
+    }
+   ]
+  },
+  {
+   "key": "s09",
+   "chapter": {
+    "number": "09",
+    "title": "Full Replay: The Contact Form"
+   },
+   "plan_section": "09",
+   "lines": [
+    {
+     "key": "s09_01",
+     "en": "Now let's {replay}replay Rahul's task from the start, with {everything}everything we've learned.",
+     "topic": "Full replay: the contact form"
+    },
+    {
+     "key": "s09_02",
+     "en": "Rahul {asks}asks for the contact form. The model {calls}calls update_plan with five steps. The harness {approval}asks, and Rahul {approves}approves."
+    },
+    {
+     "key": "s09_03",
+     "en": "{one}Step one: look at how the website is organized. {progress}In progress. {list}List the files, {read}read index.html. {done}Done."
+    },
+    {
+     "key": "s09_04",
+     "en": "{two}Step two: create the contact form page. {edit}edit_file creates contact.html: {created}File created. {done}Done, with the {evidence}evidence linked."
+    },
+    {
+     "key": "s09_05",
+     "en": "{three}Step three: save each submitted message. The {search}search finds {no}no storage in this project."
+    },
+    {
+     "key": "s09_06",
+     "en": "The model {asks}asks Rahul: a simple file, or a database? {fine}A simple file. Then update_plan {adds}adds a new step.",
+     "topic": "Replay: replanning"
+    },
+    {
+     "key": "s09_07",
+     "en": "The new step: create a file to store messages. {edit}edit_file creates messages.txt. {done}Done."
+    },
+    {
+     "key": "s09_08",
+     "en": "{back}Back to saving each message. {edit}edit_file updates contact.html. {done}Done."
+    },
+    {
+     "key": "s09_09",
+     "en": "The context window {fills}fills, and older messages {collapse}collapse into a summary. {plan}But the plan doesn't change. It {survives}survives.",
+     "topic": "Replay: the plan survives compaction"
+    },
+    {
+     "key": "s09_10",
+     "en": "{next}Next, the thank-you note. {edit}edit_file, and {done}done."
+    },
+    {
+     "key": "s09_11",
+     "en": "{last}Last step: test the whole thing. The {tests}tests run, and one {fails}fails: message not saved when the name is empty.",
+     "topic": "Replay: a failing test, then evidence"
+    },
+    {
+     "key": "s09_12",
+     "en": "The step {stays}stays in progress. The model {fixes}fixes contact.html and {runs}runs the tests again."
+    },
+    {
+     "key": "s09_13",
+     "en": "{all}All tests passed. Now it's {done}done, with the {evidence}evidence linked."
+    },
+    {
+     "key": "s09_14",
+     "en": "And the {final}final answer, with no tool call: The contact form is ready. It saves every message and shows a thank-you note. All tests pass."
+    },
+    {
+     "key": "s09_15",
+     "en": "{form}Form page: yes. {saves}Saves every message: yes. {thank}Thank-you note: yes."
+    },
+    {
+     "key": "s09_16",
+     "en": "It's the {same}same model as before. It didn't get {smarter}smarter. It was given a way to keep the whole job in {view}view."
+    }
+   ]
+  },
+  {
+   "key": "s10",
+   "chapter": {
+    "number": "10",
+    "title": "Reality Check: Plans Are Not Magic"
+   },
+   "plan_section": "10",
+   "lines": [
+    {
+     "key": "s10_01",
+     "en": "A quick {reality}reality check. Plans are useful, but they're not {magic}magic.",
+     "topic": "Reality check: plans are not magic"
+    },
+    {
+     "key": "s10_02",
+     "en": "One: a plan can be {wrong}wrong. If the model {misunderstands}misunderstands the goal, it writes a {neat}neat plan for the wrong thing. That's why human {review}review helps."
+    },
+    {
+     "key": "s10_03",
+     "en": "Two: a {tick}tick is not proof. The model can mark a step done when it {isn}isn't."
+    },
+    {
+     "key": "s10_04",
+     "en": "Three: {small}small tasks don't need a plan. For a question like what {port}port does the server use, a plan only {slower}slows things down."
+    },
+    {
+     "key": "s10_05",
+     "en": "Four: the model can {drift}drift from its own plan. A plan in the context makes that {less}less likely, not impossible."
+    },
+    {
+     "key": "s10_06",
+     "en": "A plan doesn't make the agent {right}right. It makes the agent's work {visible}visible, so {both}both the agent and the human can catch {mistakes}mistakes earlier."
+    }
+   ]
+  },
+  {
+   "key": "s11",
+   "chapter": {
+    "number": "11",
+    "title": "Conclusion and What's Next"
+   },
+   "plan_section": "11",
+   "lines": [
+    {
+     "key": "s11_01",
+     "en": "{today}Today we gave our agent something simple but powerful: a plan.",
+     "topic": "Recap"
+    },
+    {
+     "key": "s11_02",
+     "en": "A plan is just a {list}list of steps, written as plain text. The {harness}harness keeps it safe and shows it to the model on every call."
+    },
+    {
+     "key": "s11_03",
+     "en": "The agent works through it step by step, {checks}checks each step with real evidence, and {changes}changes the plan when reality turns out to be different."
+    },
+    {
+     "key": "s11_04",
+     "en": "And notice what stayed the {same}same: the {model}model, the {harness}harness and the {loop}loop. We only added one more {text}piece of text."
+    },
+    {
+     "key": "s11_05",
+     "en": "But think about {one}one of those steps. What if a single step is a {huge}huge job by itself, as big as the {whole}whole task we did today?",
+     "topic": "Next: agents working together"
+    },
+    {
+     "key": "s11_06",
+     "en": "Could our agent {hand}hand that step over to {another}another agent, and just {wait}wait for the result?"
+    },
+    {
+     "key": "s11_07",
+     "en": "That's what we'll explore in the {next}next lesson: agents working {together}together."
+    }
+   ]
+  }
+ ],
+ "excluded": []
+}

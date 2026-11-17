@@ -208,6 +208,16 @@ def manifest_path(prod, lang: str, draft: bool = False) -> Path:
     return prod.build_dir / ("draft-voice" if draft else "voice") / lang / "manifest.json"
 
 
+def timing_fp(man: dict) -> str:
+    """Fingerprint of the clip timings in a manifest (durations and speech ends). The manifest's own
+    fingerprint covers the text and voice settings only; a clip polished in place (same text, shorter
+    pauses) changes its timing, and renders that were timed to the old clip must be redone."""
+    import hashlib as _h
+    rows = sorted((k, round(e.get("duration", 0.0), 4), round(e.get("speech_end", 0.0), 4))
+                  for k, e in man.get("lines", {}).items())
+    return _h.sha256(repr(rows).encode()).hexdigest()[:16]
+
+
 def run_language(prod, narr: Narration, lang: str, state, *, draft: bool = False, approval=None) -> dict:
     """Voice one language (final or draft). Returns a summary dict."""
     profile = choose_profile(prod, narr, lang, draft)

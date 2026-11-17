@@ -18,8 +18,9 @@ the tool again does nothing. Paid providers are refused (their clips are never r
 
     .venv/bin/python tools/voice_pauses.py <slug> [--lang en] [--keys s01_01,s02_03] [--dry-run]
 
-Afterwards run `python -m automatio run <slug> --force voice` so the voice manifest, the renders
-and the timeline are rebuilt from the polished clips.
+Afterwards run `python -m automatio run <slug>`: the tool removes the production's voice manifests
+(draft and final) for that language, so the next run rebuilds them from the polished clips, and the
+renders timed to the old clips are redone (their stage fingerprints include the clip timings).
 """
 from __future__ import annotations
 
@@ -208,6 +209,12 @@ def main():
                                                        "saved": round(saved, 3), "at": now_iso()}
         atomic_write_json(job.meta, meta)
     print(f"{len(jobs)} lines; {total:.1f} s of dead air removed{' (dry run)' if a.dry_run else ''}")
+    if not a.dry_run and total > 0:                      # stale manifests: rebuilt from the polished clips on the next run
+        for draft in (True, False):
+            mp = V.manifest_path(p.prod, a.lang, draft=draft)
+            if mp.exists():
+                mp.unlink()
+                print(f"removed {mp.relative_to(ROOT)} (rebuilt on the next run)")
     if a.report:
         Path(a.report).write_text(json.dumps(report, indent=1))
 

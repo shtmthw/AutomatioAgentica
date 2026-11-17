@@ -7,7 +7,11 @@ sentence's time shared in proportion to length. (Unchanged from the previous
 production; reproduces its .srt exactly.)
 
 Same language (English subtitles on the English version): every cue is timed by the
-words it contains, from the word timings of the narration itself.
+words it contains, from the word timings of the narration itself. Subtitle words are
+aligned with the spoken words, so lines with respelled terms ("run_command" spoken as
+"run command") are word-timed too. Cue breaks are chosen per line by dynamic programming:
+sentence ends first, then colons, commas and conjunctions, never after "the", "of",
+"to"...; no flash cues, no cues over max_chars where a better break exists.
 
 Subtitles are always separate files; nothing is ever burned into the picture.
 """
@@ -98,12 +102,143 @@ def _sentence_spans(spoken: str, sents: list[str], words: list):
     return spans
 
 
+# ------------------------------------------------------------------ same language: word-timed cues
+# Break preferences inside a line (lower = better place to end a cue).
+_CONJ = {"and", "but", "or", "so", "because", "which", "who", "that", "while", "when", "then", "before", "after",
+         "if", "until", "instead", "unless", "where"}
+_FUNC = {"a", "an", "the", "of", "to", "in", "on", "at", "for", "with", "by", "from", "as", "into", "is", "are", "was",
+         "be", "its", "my", "your", "his", "her", "their", "our", "this", "these", "those", "than", "and", "or", "but",
+         "it's", "we'll", "let's", "what", "how", "very", "not", "because", "which", "who", "while", "when", "if",
+         "until", "unless", "where", "whether", "such", "like", "so"}
+_VERB = {"is", "are", "was", "were"}
+
+
+def _norm(tok: str) -> str:
+    return re.sub(r"[^\w']", "", tok.lower().replace("’", "'"))
+
+
+def token_times(subtitle: str, spoken: str, words: list) -> list[tuple[str, float, float]] | None:
+    """(token, start, end) for every whitespace token of the subtitle, from the word timings of
+    the spoken text. The spoken text may differ from the subtitle where words were respelled for
+    the voice ("run_command" -> "run command", "index.html" -> "index dot H T M L"): subtitle and
+    spoken tokens are aligned, and a respelled token takes the time of all its spoken words."""
+    import difflib
+    sub = subtitle.split()
+    spk = spoken.split()
+    if not sub or not spk or not words:
+        return None
+    ct = char_times(spoken, words)                       # (char index, start, end) per timed word
+    pos, spans = 0, []
+    for tok in spk:                                      # time span of every spoken token
+        i = spoken.find(tok, pos)
+        i = pos if i < 0 else i
+        j = i + len(tok)
+        pos = j
+        inside = [(a, b) for k, a, b in ct if i <= k < j]
+        spans.append((inside[0][0], inside[-1][1]) if inside else None)
+    for k, s in enumerate(spans):                        # punctuation-only tokens: borrow a neighbour
+        if s is None:
+            prev = next((spans[m] for m in range(k - 1, -1, -1) if spans[m]), None)
+            nxt = next((spans[m] for m in range(k + 1, len(spans)) if spans[m]), None)
+            t = prev[1] if prev else (nxt[0] if nxt else 0.0)
+            spans[k] = (t, t)
+    sm = difflib.SequenceMatcher(a=[_norm(t) for t in sub], b=[_norm(t) for t in spk], autojunk=False)
+    out: list = [None] * len(sub)
+    for op, i1, i2, j1, j2 in sm.get_opcodes():
+        if op == "equal":
+            for d in range(i2 - i1):
+                out[i1 + d] = spans[j1 + d]
+        elif op == "replace":
+            n, m = i2 - i1, j2 - j1
+            for d in range(n):                           # share the spoken span in order
+                a = j1 + (d * m) // n
+                b = max(a + 1, j1 + ((d + 1) * m) // n)
+                out[i1 + d] = (spans[a][0], spans[b - 1][1])
+        elif op == "insert":                             # spoken words with no subtitle token: extend the previous
+            if i1 > 0 and out[i1 - 1]:
+                out[i1 - 1] = (out[i1 - 1][0], spans[j2 - 1][1])
+    for k in range(len(out)):                            # subtitle tokens that are not spoken: zero length
+        if out[k] is None:
+            t = out[k - 1][1] if k and out[k - 1] else spans[0][0]
+            out[k] = (t, t)
+    return [(tok, a, b) for tok, (a, b) in zip(sub, out)]
+
+
+def segment(toks: list[tuple[str, float, float]], max_chars=56, hard_max=68, min_chars=18) -> list[tuple[int, int]]:
+    """Choose cue boundaries for one line by dynamic programming over its tokens.
+
+    A cue should end where the speaker pauses in meaning: at a sentence end (best), then a
+    colon or semicolon, a comma, before a conjunction; never right after "the", "of", "to"...
+    Cues longer than max_chars, flashes shorter than a second and reading speeds above
+    20 characters per second are penalised; two sentences share a cue only when that avoids
+    a flash cue."""
+    n = len(toks)
+    text = [t for t, _, _ in toks]
+
+    def brk(k: int) -> float:                            # cost of ending a cue after token k
+        if k == n - 1:
+            return 0.0
+        t, nxt = text[k], _norm(text[k + 1])
+        c = 0.0 if re.search(r"[.?!]['\"”)]?$", t) else 0.6 if re.search(r"[:;—–]$", t) else \
+            1.2 if t.endswith(",") else 2.5 if nxt in _CONJ else 3.5 if nxt in _VERB else 5.0
+        if _norm(t) in _FUNC and not re.search(r"[.,:;?!]$", t):
+            c += 6.0
+        return c
+
+    def cost(i: int, j: int) -> float:                   # cue made of tokens i..j-1
+        s = " ".join(text[i:j])
+        L = len(s)
+        d = toks[j - 1][2] - toks[i][1]
+        c = 2.0
+        if L > max_chars:
+            c += (L - max_chars) * 1.0
+        if L > hard_max:
+            c += 200.0
+        if L < min_chars - 4:
+            c += (min_chars - 4 - L) * 0.25
+        if d < 1.0:
+            c += (1.0 - d) * 6.0
+        cps = L / max(0.3, d + 0.35)
+        if cps > 20:
+            c += (cps - 20) * 0.8
+        inner = sum(1 for k in range(i, j - 1) if re.search(r"[.?!]['\"”)]?$", text[k]))
+        return c + 2.5 * inner
+
+    best = [0.0] + [float("inf")] * n
+    back = [0] * (n + 1)
+    for j in range(1, n + 1):
+        for i in range(max(0, j - 40), j):
+            v = best[i] + cost(i, j) + brk(j - 1)
+            if v < best[j]:
+                best[j], back[j] = v, i
+    out, j = [], n
+    while j > 0:
+        out.append((back[j], j))
+        j = back[j]
+    return out[::-1]
+
+
+def word_cues(start: float, subtitle: str, spoken: str, words: list,
+              splitter: Splitter | None = None) -> list[tuple[float, float, str]] | None:
+    """Same-language cues for one line, each timed from the first to the last word it contains."""
+    toks = token_times(subtitle, spoken, words)
+    if not toks:
+        return None
+    sp = splitter or Splitter()
+    return [(start + toks[i][1], start + toks[j - 1][2], " ".join(t for t, _, _ in toks[i:j]))
+            for i, j in segment(toks, sp.max_chars, sp.hard_max, sp.min_chars)]
+
+
 def line_cues(start: float, subtitle: str, spoken: str, words: list, *, same_language: bool = False,
               splitter: Splitter | None = None) -> list[tuple[float, float, str]]:
     """Absolute (start, end, text) cues for one narration line."""
     sp = splitter or Splitter()
     whole = (words[0][0], words[-1][0] + words[-1][1])
     cues: list[list] = []
+    if same_language:
+        wc = word_cues(start, subtitle, spoken, words, sp)
+        if wc:
+            return wc
     if same_language and spoken == subtitle:
         ct = char_times(spoken, words)
         pos, ok = 0, True
@@ -144,6 +279,30 @@ def line_cues(start: float, subtitle: str, spoken: str, words: list, *, same_lan
     return [tuple(c) for c in cues]
 
 
+def finalize_words(cues, lead=0.08, tail=0.35, min_dur=0.9, min_gap=0.04):
+    """Display times for word-timed cues (start = first word, end = last word): a cue is on screen
+    `lead` before its first word and `tail` after its last, but never after its first word starts and
+    never gone before its last word ends. When cues follow each other closely, the next cue gives up
+    part of its lead instead of cutting the end of the previous one, and the previous one stays up
+    until the next appears (no blink between them)."""
+    n = len(cues)
+    starts = []
+    for i, (a, b, t) in enumerate(cues):
+        s = a - lead
+        if i:
+            s = max(s, cues[i - 1][1] + min_gap)         # leave the previous cue up until its last word ends
+        starts.append(max(0.0, min(s, a)))
+    out = []
+    for i, (a, b, t) in enumerate(cues):
+        s = starts[i]
+        e = max(b + tail, s + min_dur)
+        if i + 1 < n:
+            e = min(max(min(e, starts[i + 1] - min_gap), b),  # keep the last word covered ...
+                    starts[i + 1] - min_gap / 2)            # ... but never touch the next cue (words < 40 ms apart)
+        out.append((s, e, t))
+    return out
+
+
 def finalize(cues, lead=0.08, tail=0.35, min_dur=0.9, min_gap=0.04):
     out = []
     for i, (a, b, t) in enumerate(cues):
@@ -162,6 +321,8 @@ def build(placed_lines: list[tuple[float, dict]], *, same_language: bool, settin
     for t, e in placed_lines:
         raw.extend(line_cues(t, e["subtitle"], e["spoken"], e["words"], same_language=same_language, splitter=sp))
     raw.sort(key=lambda c: c[0])
+    if same_language and all(len(c) == 3 for c in raw):
+        return finalize_words(raw, settings.lead, settings.tail, settings.min_duration)
     return finalize(raw, settings.lead, settings.tail, settings.min_duration)
 
 
